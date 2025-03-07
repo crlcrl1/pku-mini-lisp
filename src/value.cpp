@@ -1,12 +1,38 @@
 #include "value.h"
 
 #include <iomanip>
-#include <iostream>
 #include <ranges>
 #include <sstream>
+#include <unordered_map>
+
+const std::unordered_map<std::string, Keyword> keywordMap = {
+    {"define", Keyword::DEFINE},
+    {"lambda", Keyword::LAMBDA},
+};
 
 ValueType Value::getType() const {
     return ty;
+}
+
+std::optional<Keyword> Value::asKeyword() const {
+    if (ty == ValueType::SYMBOL) {
+        const auto symbolName = dynamic_cast<const SymbolValue*>(this)->getValue();
+        if (const auto it = keywordMap.find(symbolName); it != keywordMap.end()) {
+            return it->second;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> Value::asSymbolName() const {
+    if (ty == ValueType::SYMBOL) {
+        auto symbolName = dynamic_cast<const SymbolValue*>(this)->getValue();
+        if (const auto it = keywordMap.find(symbolName); it != keywordMap.end()) {
+            return std::nullopt;
+        }
+        return symbolName;
+    }
+    return std::nullopt;
 }
 
 std::string BooleanValue::toString() const {
@@ -27,10 +53,14 @@ std::string SymbolValue::toString() const {
     return value;
 }
 
+std::string SymbolValue::getValue() const {
+    return value;
+}
+
 std::string PairValue::toString() const {
     std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
     ss << '(';
-    const auto valueList = this->toList();
+    const auto valueList = this->toVector();
     const auto valueNum = valueList.size();
     for (auto [i, v] : std::views::enumerate(valueList)) {
         if (i == valueNum - 2) {
@@ -48,7 +78,7 @@ std::string PairValue::toString() const {
     return ss.str();
 }
 
-std::vector<ValuePtr> PairValue::toList() const {
+std::vector<ValuePtr> PairValue::toVector() const {
     std::vector<ValuePtr> result;
     auto current = this;
     while (true) {

@@ -1,11 +1,13 @@
 #include <iostream>
 #include <string>
 
+#include "eval_env.h"
 #include "parser.h"
 #include "tokenizer.h"
 #include "value.h"
 
 int main() {
+    EvalEnv env;
     while (true) {
         try {
             std::cout << ">>> ";
@@ -17,7 +19,8 @@ int main() {
             auto tokens = Tokenizer::tokenize(line);
             Parser parser(std::move(tokens));
             const auto value = parser.parse();
-            std::cout << value->toString() << std::endl;
+            const auto result = env.eval(value);
+            std::cout << result->toString() << std::endl;
         } catch (std::runtime_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;
         }

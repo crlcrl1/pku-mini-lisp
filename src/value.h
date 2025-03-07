@@ -5,6 +5,14 @@
 #include <string>
 #include <vector>
 
+class SymbolValue;
+
+enum class Keyword {
+    DEFINE,
+    LAMBDA,
+    INVALID,
+};
+
 enum class ValueType {
     BOOLEAN,
     NUMBER,
@@ -23,6 +31,8 @@ public:
     virtual ~Value() = default;
     virtual std::string toString() const = 0;
     ValueType getType() const;
+    std::optional<Keyword> asKeyword() const;
+    std::optional<std::string> asSymbolName() const;
 };
 
 using ValuePtr = std::shared_ptr<Value>;
@@ -63,6 +73,7 @@ class SymbolValue : public Value {
 public:
     explicit SymbolValue(const std::string& value) : Value(ValueType::SYMBOL), value{value} {}
     std::string toString() const override;
+    std::string getValue() const;
 };
 
 class PairValue : public Value {
@@ -75,7 +86,11 @@ public:
 
     std::string toString() const override;
 
-    std::vector<ValuePtr> toList() const;
+    /**
+     * Convert the pair to a vector
+     * @return
+     */
+    std::vector<ValuePtr> toVector() const;
 };
 
 #endif  // VALUE_H

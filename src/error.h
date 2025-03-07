@@ -8,4 +8,14 @@ public:
     using runtime_error::runtime_error;
 };
 
+class ValueError : public std::runtime_error {
+public:
+    using runtime_error::runtime_error;
+};
+
+class UnimplementedError : public std::runtime_error {
+public:
+    using runtime_error::runtime_error;
+};
+
 #endif

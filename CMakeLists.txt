@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.24.2)
 
 project(mini_lisp)
 
-option(USE_GTEST "Use gtest" ON)
+option(USE_GTEST "Use GTest" ON)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 aux_source_directory(src SOURCES)
 add_executable(mini_lisp ${SOURCES})

@@ -2,21 +2,21 @@
 
 #include "parser.h"
 #include "rjsj_test.hpp"
+#include "test_util.h"
 #include "tokenizer.h"
-#include "util.h"
 #include "value.h"
 
-std::string eval(const std::string& input) {
+std::string evalLv2(const std::string& input) {
     auto tokens = Tokenizer::tokenize(input);
     Parser parser(std::move(tokens));
     const auto value = parser.parse();
     return value->toString();
 }
 
-TEST(lisp_test, Lv2) {
-    RUN_TEST(rjsj_mini_lisp_test_Lv2, eval);
+TEST(lisp_test_lv2, Lv2) {
+    RUN_TEST(rjsj_mini_lisp_test_Lv2, evalLv2);
 }
 
-TEST(list_test, Lv2Only) {
-    RUN_TEST(rjsj_mini_lisp_test_Lv2Only, eval);
+TEST(list_test_lv2, Lv2Only) {
+    RUN_TEST(rjsj_mini_lisp_test_Lv2Only, evalLv2);
 }
