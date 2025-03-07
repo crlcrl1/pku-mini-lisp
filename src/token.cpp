@@ -5,12 +5,6 @@
 
 using namespace std::literals;
 
-/**
- * @brief Try to generate a token from a special character, i.e. '(', ')', '\`',
- * '`', ','.
- * @param c The character to generate token from.
- * @return A token if the character is a special character, nullptr otherwise.
- */
 TokenPtr Token::fromChar(char c) {
     TokenType type;
     switch (c) {

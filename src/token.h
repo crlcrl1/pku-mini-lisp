@@ -30,6 +30,12 @@ protected:
 public:
     virtual ~Token() = default;
 
+    /**
+     * @brief Try to generate a token from a special character, i.e. '(', ')', '\`',
+     * '`', ','.
+     * @param c The character to generate token from.
+     * @return A token if the character is a special character, nullptr otherwise.
+     */
     static TokenPtr fromChar(char c);
     static TokenPtr dot();
 
@@ -44,8 +50,7 @@ private:
     bool value;
 
 public:
-    explicit BooleanLiteralToken(bool value)
-        : Token(TokenType::BOOLEAN_LITERAL), value{value} {}
+    explicit BooleanLiteralToken(bool value) : Token(TokenType::BOOLEAN_LITERAL), value{value} {}
 
     static std::unique_ptr<BooleanLiteralToken> fromChar(char c);
 
@@ -60,8 +65,7 @@ private:
     double value;
 
 public:
-    explicit NumericLiteralToken(double value)
-        : Token(TokenType::NUMERIC_LITERAL), value{value} {}
+    explicit NumericLiteralToken(double value) : Token(TokenType::NUMERIC_LITERAL), value{value} {}
 
     double getValue() const {
         return value;
@@ -88,10 +92,12 @@ private:
     std::string name;
 
 public:
-    explicit IdentifierToken(const std::string& name)
-        : Token(TokenType::IDENTIFIER), name{name} {}
+    explicit IdentifierToken(const std::string& name) : Token(TokenType::IDENTIFIER), name{name} {}
 
     const std::string& getName() const {
+        return name;
+    }
+    const std::string& getValue() const {
         return name;
     }
     std::string toString() const override;

@@ -18,8 +18,7 @@ std::string NumericValue::toString() const {
 }
 
 std::string StringValue::toString() const {
-    static std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
-    ss.str("");
+    std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
     ss << std::quoted(value);
     return ss.str();
 }
@@ -29,16 +28,13 @@ std::string SymbolValue::toString() const {
 }
 
 std::string PairValue::toString() const {
-    static std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
-    ss.str("");
-    ss.clear();
-    ss.clear();
+    std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
     ss << '(';
     const auto valueList = this->toList();
     const auto valueNum = valueList.size();
     for (auto [i, v] : std::views::enumerate(valueList)) {
         if (i == valueNum - 2) {
-            const auto last = valueList.back();
+            const auto& last = valueList.back();
             if (last->getType() == ValueType::NIL) {
                 ss << v->toString();
             } else {

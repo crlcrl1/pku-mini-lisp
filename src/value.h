@@ -18,7 +18,7 @@ class Value {
     ValueType ty;
 
 public:
-    explicit Value(ValueType ty) : ty{ty} {}
+    explicit Value(const ValueType ty) : ty{ty} {}
 
     virtual ~Value() = default;
     virtual std::string toString() const = 0;
@@ -31,7 +31,7 @@ class BooleanValue : public Value {
     bool value;
 
 public:
-    explicit BooleanValue(bool value) : Value(ValueType::BOOLEAN), value{value} {}
+    explicit BooleanValue(const bool value) : Value(ValueType::BOOLEAN), value{value} {}
     std::string toString() const override;
 };
 
@@ -39,7 +39,7 @@ class NumericValue : public Value {
     double value;
 
 public:
-    explicit NumericValue(double value) : Value(ValueType::NUMBER), value{value} {}
+    explicit NumericValue(const double value) : Value(ValueType::NUMBER), value{value} {}
     std::string toString() const override;
 };
 
