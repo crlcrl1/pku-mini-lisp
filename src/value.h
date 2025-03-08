@@ -2,6 +2,7 @@
 #define VALUE_H
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -21,6 +22,7 @@ enum class ValueType {
     SYMBOL,
     PAIR,
     BUILTIN,
+    LAMBDA,
 };
 
 class Value {
@@ -47,6 +49,7 @@ class BooleanValue : public Value {
 public:
     explicit BooleanValue(const bool value) : Value(ValueType::BOOLEAN), value{value} {}
     std::string toString() const override;
+    bool getValue() const;
 };
 
 class NumericValue : public Value {
@@ -109,5 +112,17 @@ public:
     std::string toString() const override;
     ValuePtr apply(const std::vector<ValuePtr>& args) const;
 };
+
+class LambdaValue : public Value {
+    std::vector<std::string> params;
+    std::vector<ValuePtr> body;
+
+public:
+    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body)
+        : Value(ValueType::LAMBDA), params(std::move(params)), body(std::move(body)) {}
+    std::string toString() const override;
+};
+
+extern const std::set<ValueType> SELF_EVAL_VALUES;
 
 #endif  // VALUE_H

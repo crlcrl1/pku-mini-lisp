@@ -30,6 +30,8 @@ public:
     static ValuePtr apply(const ValuePtr& proc, const std::vector<ValuePtr>& args);
 
     std::vector<ValuePtr> evalList(const ValuePtr& expr);
+
+    void addVariable(const std::string& name, const ValuePtr& value);
 };
 
 #endif  // EVAL_ENV_H

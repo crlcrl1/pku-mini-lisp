@@ -6,17 +6,17 @@
 #include "tokenizer.h"
 #include "value.h"
 
-std::string evalLv2(const std::string& input) {
+std::string parse(const std::string& input) {
     auto tokens = Tokenizer::tokenize(input);
     Parser parser(std::move(tokens));
     const auto value = parser.parse();
     return value->toString();
 }
 
-TEST(lisp_test_lv2, Lv2) {
-    RUN_TEST(rjsj_mini_lisp_test_Lv2, evalLv2);
+TEST(lisp_test_parse, Lv2) {
+    RUN_TEST(rjsj_mini_lisp_test_Lv2, parse);
 }
 
-TEST(list_test_lv2, Lv2Only) {
-    RUN_TEST(rjsj_mini_lisp_test_Lv2Only, evalLv2);
+TEST(lisp_test_parse, Lv2Only) {
+    RUN_TEST(rjsj_mini_lisp_test_Lv2Only, parse);
 }

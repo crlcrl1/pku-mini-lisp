@@ -5,7 +5,13 @@
 #include <sstream>
 #include <unordered_map>
 
-const std::unordered_map<std::string, Keyword> keywordMap = {
+const std::set<ValueType> SELF_EVAL_VALUES = {
+    ValueType::BOOLEAN,
+    ValueType::NUMBER,
+    ValueType::STRING,
+};
+
+const std::unordered_map<std::string, Keyword> KEYWORD_MAP = {
     {"define", Keyword::DEFINE},
     {"lambda", Keyword::LAMBDA},
 };
@@ -17,7 +23,7 @@ ValueType Value::getType() const {
 std::optional<Keyword> Value::asKeyword() const {
     if (ty == ValueType::SYMBOL) {
         const auto symbolName = dynamic_cast<const SymbolValue*>(this)->getValue();
-        if (const auto it = keywordMap.find(symbolName); it != keywordMap.end()) {
+        if (const auto it = KEYWORD_MAP.find(symbolName); it != KEYWORD_MAP.end()) {
             return it->second;
         }
     }
@@ -27,9 +33,6 @@ std::optional<Keyword> Value::asKeyword() const {
 std::optional<std::string> Value::asSymbolName() const {
     if (ty == ValueType::SYMBOL) {
         auto symbolName = dynamic_cast<const SymbolValue*>(this)->getValue();
-        if (const auto it = keywordMap.find(symbolName); it != keywordMap.end()) {
-            return std::nullopt;
-        }
         return symbolName;
     }
     return std::nullopt;
@@ -50,8 +53,19 @@ std::string BooleanValue::toString() const {
     return value ? "#t" : "#f";
 }
 
+bool BooleanValue::getValue() const {
+    return value;
+}
+
 std::string NumericValue::toString() const {
-    return std::to_string(value);
+    auto result = std::to_string(value);
+    if (result.find('.') != std::string::npos) {
+        result.erase(result.find_last_not_of('0') + 1);
+        if (result.back() == '.') {
+            result.pop_back();
+        }
+    }
+    return result;
 }
 
 double NumericValue::getValue() const {
@@ -121,6 +135,10 @@ std::string BuiltinProcValue::toString() const {
 
 ValuePtr BuiltinProcValue::apply(const std::vector<ValuePtr>& args) const {
     return func(args);
+}
+
+std::string LambdaValue::toString() const {
+    return "#<proc>";
 }
 
 std::string NilValue::toString() const {

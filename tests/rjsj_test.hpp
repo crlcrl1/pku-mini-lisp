@@ -110,12 +110,18 @@ using Token = std::variant<LParenToken, RParenToken, DotToken, Bool, Num, Str, S
 
 inline std::optional<Token> tokenFromChar(char c) {
     switch (c) {
-        case '(': return LParenToken{};
-        case ')': return RParenToken{};
-        case '.': return DotToken{};
-        case '`': throw std::runtime_error("Quasiquote not supported");
-        case ',': throw std::runtime_error("Unquote not supported");
-        default: return std::nullopt;
+        case '(':
+            return LParenToken{};
+        case ')':
+            return RParenToken{};
+        case '.':
+            return DotToken{};
+        case '`':
+            throw std::runtime_error("Quasiquote not supported");
+        case ',':
+            throw std::runtime_error("Unquote not supported");
+        default:
+            return std::nullopt;
     }
 }
 const std::set<char> TOKEN_END{'(', ')', '\'', '`', ',', '"'};
@@ -674,7 +680,7 @@ RMLT_CASE("(or 3 (/ 1 0))", "3")
 RMLT_CASE("(if (or #f #f #f) 1 2)", "2")
 RMLT_CASE("(lambda (x) (+ x x))", "#<proc>")
 RMLT_CASE("(define (double x) (+ x x))")
-RMLT_CASE("double", "#proc")
+RMLT_CASE("double", "#<proc>")
 RMLT_END_CASES()
 
 RMLT_BEGIN_CASES(Lv5Extra)

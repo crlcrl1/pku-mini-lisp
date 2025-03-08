@@ -7,37 +7,12 @@
 
 #include "builtins.h"
 #include "error.h"
+#include "forms.h"
+#include "utils.h"
 #include "value.h"
 
-#define BUILTIN_PAIR(procName, builtinName) \
-    std::make_pair(#builtinName, std::make_shared<BuiltinProcValue>(&procName))
-
-const std::set selfEvaluatingTypes = {
-    ValueType::BOOLEAN,
-    ValueType::NUMBER,
-    ValueType::STRING,
-};
-
-// clang-format off
-const std::unordered_map<std::string, ValuePtr> builtinFunctions = {
-    BUILTIN_PAIR(builtins::add, +),
-    BUILTIN_PAIR(builtins::sub, -),
-    BUILTIN_PAIR(builtins::mul, *),
-    BUILTIN_PAIR(builtins::div, /),
-    BUILTIN_PAIR(builtins::eq, =),
-    BUILTIN_PAIR(builtins::lt, <),
-    BUILTIN_PAIR(builtins::gt, >),
-    BUILTIN_PAIR(builtins::le, <=),
-    BUILTIN_PAIR(builtins::ge, >=),
-    BUILTIN_PAIR(builtins::apply, apply),
-    BUILTIN_PAIR(builtins::display, display),
-    BUILTIN_PAIR(builtins::print, print),
-    BUILTIN_PAIR(builtins::exit, exit),
-};
-// clang-format on
-
 void EvalEnv::addBuiltins() {
-    for (const auto& i : builtinFunctions) {
+    for (const auto& i : BUILTINS) {
         this->symbolTable.insert(i);
     }
 }
@@ -50,7 +25,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
     using OptStr = std::optional<std::string>;
 
     const auto ty = expr->getType();
-    if (selfEvaluatingTypes.contains(ty)) {  // self-evaluating types
+    if (SELF_EVAL_VALUES.contains(ty)) {  // self-evaluating types
         return expr;
     }
     if (ty == ValueType::NIL) {  // nil
@@ -79,23 +54,16 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         if (first->getType() != ValueType::SYMBOL) {
             throw UnimplementedError("Only symbols can be evaluated");
         }
-        const auto keyword = first->asKeyword().value_or(Keyword::INVALID);
-        if (keyword == Keyword::DEFINE) {
-            if (values.size() == 4 && values[3]->getType() != ValueType::NIL) {
-                throw ValueError(
-                    std::format("define: expected 2 arguments, but got {}", values.size()));
-            }
-            const auto& symbol = values[1];
-            if (symbol->getType() != ValueType::SYMBOL) {
-                throw ValueError("define: first argument must be a symbol");
-            }
-            const auto symbolName =
-                symbol->asSymbolName()
-                    .or_else([] -> OptStr { throw ValueError("Expected symbol, found keyword"); })
-                    .value_or("");
-            symbolTable[symbolName] = this->eval(values[2]);
-            return std::make_shared<NilValue>();
+
+        // Check if it's a special form
+        if (SPECIAL_FORMS.contains(first->asSymbolName().value())) {
+            const auto form = SPECIAL_FORMS.at(first->asSymbolName().value());
+            auto params = std::vector(values.begin() + 1, values.end());
+            removeTrailingNil(params);
+            return form(params, *this);
         }
+
+        // It's a function call
         const auto proc = this->eval(first);
         const std::vector<ValuePtr> args = this->evalList(pair->getCdr());
         return apply(proc, args);
@@ -126,12 +94,12 @@ std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {
         throw ValueError("Expected a list");
     }
     auto vector = pair->toVector();
-    // check if the last element is a nil
-    if (vector.back()->getType() != ValueType::NIL) {
-        throw ValueError("Expected a proper list");
-    }
-    vector.pop_back();
+    removeTrailingNil(vector);
     std::ranges::transform(vector, std::back_inserter(result),
                            [this](const ValuePtr& v) { return this->eval(v); });
     return result;
+}
+
+void EvalEnv::addVariable(const std::string& name, const ValuePtr& value) {
+    this->symbolTable[name] = value;
 }
