@@ -35,12 +35,27 @@ std::optional<std::string> Value::asSymbolName() const {
     return std::nullopt;
 }
 
+bool Value::isNumber() const {
+    return ty == ValueType::NUMBER;
+}
+
+std::optional<double> Value::asNumber() const {
+    if (this->isNumber()) {
+        return dynamic_cast<const NumericValue*>(this)->getValue();
+    }
+    return std::nullopt;
+}
+
 std::string BooleanValue::toString() const {
     return value ? "#t" : "#f";
 }
 
 std::string NumericValue::toString() const {
     return std::to_string(value);
+}
+
+double NumericValue::getValue() const {
+    return value;
 }
 
 std::string StringValue::toString() const {
@@ -91,6 +106,21 @@ std::vector<ValuePtr> PairValue::toVector() const {
         }
     }
     return result;
+}
+ValuePtr PairValue::getCar() const {
+    return car;
+}
+
+ValuePtr PairValue::getCdr() const {
+    return cdr;
+}
+
+std::string BuiltinProcValue::toString() const {
+    return "#<proc>";
+}
+
+ValuePtr BuiltinProcValue::apply(const std::vector<ValuePtr>& args) const {
+    return func(args);
 }
 
 std::string NilValue::toString() const {

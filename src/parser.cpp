@@ -11,9 +11,9 @@
  * @param tokenTy the type of token to match
  * @param valueTy the type of value to return
  */
-#define RETURN_VALUE_IF_MATCH(token, tokenTy, valueTy)   \
-    if (auto t = dynamic_cast<tokenTy*>(token.get())) {  \
-        return std::make_shared<valueTy>(t->getValue()); \
+#define RETURN_VALUE_IF_MATCH(token, tokenTy, valueTy)                \
+    if (auto t = dynamic_cast<tokenTy*>(token.get()); t != nullptr) { \
+        return std::make_shared<valueTy>(t->getValue());              \
     }
 
 /**

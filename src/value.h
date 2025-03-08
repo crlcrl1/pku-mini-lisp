@@ -20,6 +20,7 @@ enum class ValueType {
     NIL,
     SYMBOL,
     PAIR,
+    BUILTIN,
 };
 
 class Value {
@@ -33,9 +34,12 @@ public:
     ValueType getType() const;
     std::optional<Keyword> asKeyword() const;
     std::optional<std::string> asSymbolName() const;
+    bool isNumber() const;
+    std::optional<double> asNumber() const;
 };
 
 using ValuePtr = std::shared_ptr<Value>;
+using BuiltinFuncType = ValuePtr(const std::vector<ValuePtr>&);
 
 class BooleanValue : public Value {
     bool value;
@@ -51,6 +55,7 @@ class NumericValue : public Value {
 public:
     explicit NumericValue(const double value) : Value(ValueType::NUMBER), value{value} {}
     std::string toString() const override;
+    double getValue() const;
 };
 
 class StringValue : public Value {
@@ -91,6 +96,18 @@ public:
      * @return
      */
     std::vector<ValuePtr> toVector() const;
+
+    ValuePtr getCar() const;
+    ValuePtr getCdr() const;
+};
+
+class BuiltinProcValue : public Value {
+    BuiltinFuncType* func;
+
+public:
+    explicit BuiltinProcValue(BuiltinFuncType* func) : Value(ValueType::BUILTIN), func(func) {}
+    std::string toString() const override;
+    ValuePtr apply(const std::vector<ValuePtr>& args) const;
 };
 
 #endif  // VALUE_H
