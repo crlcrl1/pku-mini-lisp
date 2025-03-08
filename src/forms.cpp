@@ -16,9 +16,6 @@ const std::unordered_map<std::string, SpecialFormType*> SPECIAL_FORMS = {
 // clang-format on
 
 ValuePtr defineForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    if (args.size() != 2) {
-        throw ValueError(std::format("define: expected 2 arguments, but got {}", args.size()));
-    }
     if (const auto name = args[0]->asSymbolName(); name.has_value()) {
         env.addVariable(*name, env.eval(args[1]));
     } else if (const auto pair = dynamic_cast<PairValue*>(args[0].get()); pair != nullptr) {
@@ -26,7 +23,9 @@ ValuePtr defineForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
         if (!procName.has_value()) {
             throw ValueError("define: expected a symbol as the first argument");
         }
-        auto lambda = lambdaForm({pair->getCdr(), args[1]}, env);
+        std::vector params = {pair->getCdr()};
+        params.insert(params.end(), args.begin() + 1, args.end());
+        const auto lambda = lambdaForm(params, env);
         env.addVariable(*procName, lambda);
     } else {
         throw ValueError("define: expected a symbol or a pair as the first argument");
@@ -83,18 +82,16 @@ ValuePtr orForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
     return std::make_shared<BooleanValue>(false);
 }
 
-ValuePtr lambdaForm(const std::vector<ValuePtr>& args, EvalEnv&) {
-    if (args.size() != 2) {
-        throw ValueError(std::format("lambda: expected 2 arguments, but got {}", args.size()));
-    }
+ValuePtr lambdaForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
     const auto params = dynamic_cast<PairValue*>(args[0].get());
-    const auto body = dynamic_cast<PairValue*>(args[1].get());
-    if (params == nullptr || body == nullptr) {
-        throw ValueError("lambda: expected a pair of parameters and a pair of body");
+    const auto body = std::vector(args.begin() + 1, args.end());
+    if (params == nullptr) {
+        throw ValueError("lambda: expected a pair of parameters");
     }
     auto paramsList = std::vector<std::string>{};
     auto paramsVec = params->toVector();
     removeTrailingNil(paramsVec);
+
     for (const auto& param : paramsVec) {
         if (const auto name = param->asSymbolName(); name.has_value()) {
             paramsList.push_back(*name);
@@ -103,8 +100,5 @@ ValuePtr lambdaForm(const std::vector<ValuePtr>& args, EvalEnv&) {
         }
     }
 
-    auto bodyVec = body->toVector();
-    removeTrailingNil(bodyVec);
-
-    return std::make_shared<LambdaValue>(paramsList, bodyVec);
+    return std::make_shared<LambdaValue>(paramsList, body, env.createChild(paramsList, paramsVec));
 }

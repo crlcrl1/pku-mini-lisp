@@ -1,9 +1,13 @@
 #include "value.h"
 
 #include <iomanip>
+#include <memory>
 #include <ranges>
 #include <sstream>
 #include <unordered_map>
+
+#include "error.h"
+#include "eval_env.h"
 
 const std::set<ValueType> SELF_EVAL_VALUES = {
     ValueType::BOOLEAN,
@@ -139,6 +143,21 @@ ValuePtr BuiltinProcValue::apply(const std::vector<ValuePtr>& args) const {
 
 std::string LambdaValue::toString() const {
     return "#<proc>";
+}
+
+ValuePtr LambdaValue::apply(const std::vector<ValuePtr>& args) const {
+    if (args.size() != params.size()) {
+        throw ValueError(
+            std::format("Expected {} arguments, but got {}", params.size(), args.size()));
+    }
+    for (size_t i = 0; i < params.size(); i++) {
+        env->addVariable(params[i], args[i]);
+    }
+    ValuePtr result = std::make_shared<NilValue>();
+    for (const auto& expr : body) {
+        result = env->eval(expr);
+    }
+    return result;
 }
 
 std::string NilValue::toString() const {

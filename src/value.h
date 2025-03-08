@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+class EvalEnv;
 class SymbolValue;
 
 enum class Keyword {
@@ -116,11 +117,14 @@ public:
 class LambdaValue : public Value {
     std::vector<std::string> params;
     std::vector<ValuePtr> body;
+    std::shared_ptr<EvalEnv> env;
 
 public:
-    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body)
-        : Value(ValueType::LAMBDA), params(std::move(params)), body(std::move(body)) {}
+    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body,
+                const std::shared_ptr<EvalEnv>& env)
+        : Value(ValueType::LAMBDA), params(std::move(params)), body(std::move(body)), env(env) {}
     std::string toString() const override;
+    ValuePtr apply(const std::vector<ValuePtr>& args) const;
 };
 
 extern const std::set<ValueType> SELF_EVAL_VALUES;

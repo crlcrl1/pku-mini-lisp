@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "eval_env.h"
@@ -7,7 +8,7 @@
 #include "value.h"
 
 int main() {
-    EvalEnv env;
+    const auto env = EvalEnv::createEnv();
     while (true) {
         try {
             std::cout << ">>> ";
@@ -19,7 +20,7 @@ int main() {
             auto tokens = Tokenizer::tokenize(line);
             Parser parser(std::move(tokens));
             const auto value = parser.parse();
-            const auto result = env.eval(value);
+            const auto result = env->eval(value);
             std::cout << result->toString() << std::endl;
         } catch (std::runtime_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;

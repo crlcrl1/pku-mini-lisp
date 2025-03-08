@@ -8,12 +8,19 @@
 class Value;
 using ValuePtr = std::shared_ptr<Value>;
 
-class EvalEnv {
+class EvalEnv : public std::enable_shared_from_this<EvalEnv> {
     std::unordered_map<std::string, ValuePtr> symbolTable;
+    std::shared_ptr<EvalEnv> parent;
     void addBuiltins();
+    ValuePtr lookupBinding(const std::string& name);
+
+    EvalEnv();
+
+    explicit EvalEnv(std::shared_ptr<EvalEnv> parent);
 
 public:
-    EvalEnv();
+    static std::shared_ptr<EvalEnv> createEnv();
+    static std::shared_ptr<EvalEnv> createEnv(std::shared_ptr<EvalEnv> parent);
 
     /**
      * Evaluate an expression
@@ -32,6 +39,9 @@ public:
     std::vector<ValuePtr> evalList(const ValuePtr& expr);
 
     void addVariable(const std::string& name, const ValuePtr& value);
+
+    std::shared_ptr<EvalEnv> createChild(const std::vector<std::string>& params,
+                                         const std::vector<ValuePtr>& args);
 };
 
 #endif  // EVAL_ENV_H
