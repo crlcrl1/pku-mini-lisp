@@ -18,6 +18,9 @@ int main() {
                 std::exit(0);
             }
             auto tokens = Tokenizer::tokenize(line);
+            if (tokens.empty()) {
+                continue;
+            }
             Parser parser(std::move(tokens));
             const auto value = parser.parse();
             const auto result = env->eval(value);

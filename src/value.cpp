@@ -15,6 +15,10 @@ const std::set<ValueType> SELF_EVAL_VALUES = {
     ValueType::STRING,
 };
 
+const std::set<ValueType> ATOMIC_VALUES = {
+    ValueType::BOOLEAN, ValueType::NUMBER, ValueType::STRING, ValueType::NIL, ValueType::SYMBOL,
+};
+
 const std::unordered_map<std::string, Keyword> KEYWORD_MAP = {
     {"define", Keyword::DEFINE},
     {"lambda", Keyword::LAMBDA},
@@ -53,12 +57,23 @@ std::optional<double> Value::asNumber() const {
     return std::nullopt;
 }
 
+bool Value::isAtom() const {
+    return ATOMIC_VALUES.contains(ty);
+}
+
 std::string BooleanValue::toString() const {
     return value ? "#t" : "#f";
 }
 
 bool BooleanValue::getValue() const {
     return value;
+}
+
+bool BooleanValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::BOOLEAN) {
+        return false;
+    }
+    return value == dynamic_cast<BooleanValue*>(other.get())->getValue();
 }
 
 std::string NumericValue::toString() const {
@@ -76,10 +91,28 @@ double NumericValue::getValue() const {
     return value;
 }
 
+bool NumericValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::NUMBER) {
+        return false;
+    }
+    return value == dynamic_cast<NumericValue*>(other.get())->getValue();
+}
+
 std::string StringValue::toString() const {
-    std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
+    std::stringstream ss;
     ss << std::quoted(value);
     return ss.str();
+}
+
+std::string StringValue::getValue() const {
+    return value;
+}
+
+bool StringValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::STRING) {
+        return false;
+    }
+    return value == dynamic_cast<StringValue*>(other.get())->getValue();
 }
 
 std::string SymbolValue::toString() const {
@@ -90,8 +123,15 @@ std::string SymbolValue::getValue() const {
     return value;
 }
 
+bool SymbolValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::SYMBOL) {
+        return false;
+    }
+    return value == dynamic_cast<SymbolValue*>(other.get())->getValue();
+}
+
 std::string PairValue::toString() const {
-    std::stringstream ss;  // Reuse the same stringstream to avoid runtime overhead
+    std::stringstream ss;
     ss << '(';
     const auto valueList = this->toVector();
     const auto valueNum = valueList.size();
@@ -125,6 +165,18 @@ std::vector<ValuePtr> PairValue::toVector() const {
     }
     return result;
 }
+
+PairValue PairValue::fromVector(const std::vector<ValuePtr>& vec) {
+    if (vec.empty()) {
+        return {std::make_shared<NilValue>(), std::make_shared<NilValue>()};
+    }
+    auto current = PairValue(vec.back(), std::make_shared<NilValue>());
+    for (auto it = vec.rbegin() + 1; it != vec.rend(); ++it) {
+        current = PairValue(*it, std::make_shared<PairValue>(current));
+    }
+    return current;
+}
+
 ValuePtr PairValue::getCar() const {
     return car;
 }
@@ -133,12 +185,27 @@ ValuePtr PairValue::getCdr() const {
     return cdr;
 }
 
+bool PairValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::PAIR) {
+        return false;
+    }
+    const auto otherPair = dynamic_cast<PairValue*>(other.get());
+    return car->equals(otherPair->car) && cdr->equals(otherPair->cdr);
+}
+
 std::string BuiltinProcValue::toString() const {
     return "#<proc>";
 }
 
 ValuePtr BuiltinProcValue::apply(const std::vector<ValuePtr>& args) const {
     return func(args);
+}
+
+bool BuiltinProcValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::BUILTIN) {
+        return false;
+    }
+    return func == dynamic_cast<BuiltinProcValue*>(other.get())->func;
 }
 
 std::string LambdaValue::toString() const {
@@ -160,6 +227,18 @@ ValuePtr LambdaValue::apply(const std::vector<ValuePtr>& args) const {
     return result;
 }
 
+bool LambdaValue::equals(const ValuePtr& other) const {
+    if (other->getType() != ValueType::LAMBDA) {
+        return false;
+    }
+    const auto otherLambda = dynamic_cast<LambdaValue*>(other.get());
+    return params == otherLambda->params && body == otherLambda->body;
+}
+
 std::string NilValue::toString() const {
     return "()";
+}
+
+bool NilValue::equals(const ValuePtr& other) const {
+    return other->getType() == ValueType::NIL;
 }

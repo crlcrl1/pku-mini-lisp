@@ -38,7 +38,16 @@ public:
 
     std::vector<ValuePtr> evalList(const ValuePtr& expr);
 
-    void addVariable(const std::string& name, const ValuePtr& value);
+    /**
+     * Add a variable to the environment and return the old value if it exists
+     *
+     * @param name variable name
+     * @param value variable value
+     * @return old value if it exists, std::nullopt otherwise
+     */
+    std::optional<ValuePtr> addVariable(const std::string& name, const ValuePtr& value);
+
+    bool removeVariable(const std::string& name);
 
     std::shared_ptr<EvalEnv> createChild(const std::vector<std::string>& params,
                                          const std::vector<ValuePtr>& args);

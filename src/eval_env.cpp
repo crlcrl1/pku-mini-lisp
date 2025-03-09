@@ -103,6 +103,7 @@ ValuePtr EvalEnv::apply(const ValuePtr& proc, const std::vector<ValuePtr>& args)
     }
     if (proc->getType() == ValueType::LAMBDA) {
         const auto lambda = dynamic_cast<LambdaValue*>(proc.get());
+        // std::shared_ptr<EvalEnv> env = this->createChild();
         return lambda->apply(args);
     }
     throw UnimplementedError("EvalEnv::apply");
@@ -124,21 +125,35 @@ std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {
     return result;
 }
 
-void EvalEnv::addVariable(const std::string& name, const ValuePtr& value) {
-    this->symbolTable[name] = value;
+std::optional<ValuePtr> EvalEnv::addVariable(const std::string& name, const ValuePtr& value) {
+    if (symbolTable.contains(name)) {
+        auto old = symbolTable[name];
+        symbolTable[name] = value;
+        return std::move(old);
+    }
+    symbolTable[name] = value;
+    return std::nullopt;
+}
+
+bool EvalEnv::removeVariable(const std::string& name) {
+    if (symbolTable.contains(name)) {
+        symbolTable.erase(name);
+        return true;
+    }
+    return false;
 }
 
 std::shared_ptr<EvalEnv> EvalEnv::createChild(const std::vector<std::string>& params,
                                               const std::vector<ValuePtr>& args) {
-    const std::shared_ptr<EvalEnv> child = this->shared_from_this();
+    EvalEnv child = EvalEnv(this->shared_from_this());
     if (params.size() != args.size()) {
         throw ValueError(
             std::format("Expected {} arguments, but got {}", params.size(), args.size()));
     }
     for (size_t i = 0; i < params.size(); i++) {
-        child->addVariable(params[i], args[i]);
+        child.addVariable(params[i], args[i]);
     }
-    return child;
+    return std::make_shared<EvalEnv>(child);
 }
 
 ValuePtr EvalEnv::lookupBinding(const std::string& name) {

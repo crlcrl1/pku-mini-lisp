@@ -46,3 +46,18 @@ TEST(list_test_eval, Lv6) {
     env->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv6, eval);
 }
+
+TEST(list_test_eval, Lv7) {
+    env->reset();
+    RUN_TEST(rjsj_mini_lisp_test_Lv7, eval);
+}
+
+TEST(list_test_eval, Lv7Lib) {
+    env->reset();
+    RUN_TEST(rjsj_mini_lisp_test_Lv7Lib, eval);
+}
+
+TEST(list_test_eval, Sicp) {
+    env->reset();
+    RUN_TEST(rjsj_mini_lisp_test_Sicp, eval);
+}
