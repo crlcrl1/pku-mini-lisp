@@ -17,6 +17,8 @@ private:
 
 public:
     static std::deque<TokenPtr> tokenize(const std::string& input);
+    static bool checkEnd(const std::deque<TokenPtr>& tokens);
+    static std::deque<TokenPtr> fromStream(std::istream* stream, bool isRepl);
 };
 
 #endif

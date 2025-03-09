@@ -43,7 +43,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         return expr;
     }
     if (ty == ValueType::NIL) {  // nil
-        throw ValueError("Cannot evaluate an empty list");
+        throw ValueError("Cannot evaluate an empty list (nil value)");
     }
     if (ty == ValueType::SYMBOL) {  // symbol, lookup in symbol table
         const auto symbolName =

@@ -1,10 +1,12 @@
 #include "tokenizer.h"
 
 #include <cctype>
+#include <iostream>
 #include <set>
 #include <stdexcept>
 
 #include "error.h"
+#include "utils.h"
 
 const std::set TOKEN_END{'(', ')', '\'', '`', ',', '"'};
 
@@ -87,4 +89,38 @@ std::deque<TokenPtr> Tokenizer::tokenize() const {
 
 std::deque<TokenPtr> Tokenizer::tokenize(const std::string& input) {
     return Tokenizer(input).tokenize();
+}
+
+bool Tokenizer::checkEnd(const std::deque<TokenPtr>& tokens) {
+    ssize_t parenCount = 0;
+    for (const auto& token : tokens) {
+        if (token->getType() == TokenType::LEFT_PAREN) {
+            parenCount++;
+        } else if (token->getType() == TokenType::RIGHT_PAREN) {
+            parenCount--;
+        }
+    }
+    if (parenCount < 0) {
+        throw SyntaxError("Unexpected ')'");
+    }
+    return parenCount == 0;
+}
+
+std::deque<TokenPtr> Tokenizer::fromStream(std::istream* stream, const bool isRepl) {
+    if (isRepl) {
+        std::cout << ">>> ";
+    }
+    std::string line;
+    std::getline(*stream, line);
+
+    auto tokens = tokenize(line);
+    while (!checkEnd(tokens)) {
+        if (isRepl) {
+            std::cout << "... ";
+        }
+        std::getline(*stream, line);
+        auto newTokens = tokenize(line);
+        tokens = merge(std::move(tokens), std::move(newTokens));
+    }
+    return tokens;
 }
