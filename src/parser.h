@@ -19,6 +19,7 @@ public:
     explicit Parser(std::deque<TokenPtr> tokens);
 
     ValuePtr parse();
+    bool empty() const;
 };
 
 #endif  // PARSER_H

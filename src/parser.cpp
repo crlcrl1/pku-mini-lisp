@@ -2,6 +2,7 @@
 
 #include "error.h"
 #include "token.h"
+#include "utils.h"
 #include "value.h"
 
 /**
@@ -52,6 +53,10 @@ ValuePtr Parser::parse() {
     throw SyntaxError("Unexpected token: " + token->toString());
 }
 
+bool Parser::empty() const {
+    return tokens.empty();
+}
+
 ValuePtr Parser::parseTails() {
     if (tokens.empty()) {
         throw SyntaxError("Expected ')'");
@@ -62,7 +67,7 @@ ValuePtr Parser::parseTails() {
     // find right parenthesis, return nil
     if (frontTy == TokenType::RIGHT_PAREN) {
         tokens.pop_front();
-        return std::make_shared<NilValue>();
+        return LISP_NIL;
     }
 
     auto car = this->parse();
@@ -84,9 +89,9 @@ ValuePtr Parser::parseTails() {
         if (endToken->getType() != TokenType::RIGHT_PAREN) {
             throw SyntaxError("Expected ')' at the end of the list");
         }
-        return std::make_shared<PairValue>(car, cdr);
+        return LISP_PAIR(car, cdr);
     }
 
     auto cdr = this->parseTails();
-    return std::make_shared<PairValue>(car, cdr);
+    return LISP_PAIR(car, cdr);
 }

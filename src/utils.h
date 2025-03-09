@@ -28,4 +28,19 @@ std::deque<T> merge(std::deque<T> a, std::deque<T> b) {
     }                                                                         \
     vec.pop_back();
 
+#define CHECK_PARAM_NUM(name, num)                                      \
+    if (params.size() != num) {                                         \
+        throw ValueError(#name " requires exactly " #num " arguments"); \
+    }
+
+#define CHECK_EMPTY_PARAMS(name)                                   \
+    if (params.empty()) {                                          \
+        throw ValueError(#name " requires at least one argument"); \
+    }
+
+#define LISP_BOOL(value) std::make_shared<BooleanValue>(value)
+#define LISP_NUM(value) std::make_shared<NumericValue>(value)
+#define LISP_NIL std::make_shared<NilValue>()
+#define LISP_PAIR(car, cdr) std::make_shared<PairValue>(car, cdr)
+
 #endif  // UTILS_H

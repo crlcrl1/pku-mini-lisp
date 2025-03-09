@@ -103,7 +103,7 @@ ValuePtr EvalEnv::apply(const ValuePtr& proc, const std::vector<ValuePtr>& args)
         const auto lambda = dynamic_cast<LambdaValue*>(proc.get());
         return lambda->apply(args);
     }
-    throw UnimplementedError("EvalEnv::apply");
+    throw ValueError("Only functions can be applied");
 }
 
 std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {

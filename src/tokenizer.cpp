@@ -99,9 +99,9 @@ bool Tokenizer::checkEnd(const std::deque<TokenPtr>& tokens) {
         } else if (token->getType() == TokenType::RIGHT_PAREN) {
             parenCount--;
         }
-    }
-    if (parenCount < 0) {
-        throw SyntaxError("Unexpected ')'");
+        if (parenCount < 0) {
+            throw SyntaxError("Unexpected ')'");
+        }
     }
     return parenCount == 0;
 }

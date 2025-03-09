@@ -217,17 +217,15 @@ ValuePtr LambdaValue::apply(const std::vector<ValuePtr>& args) const {
         throw ValueError(
             std::format("Expected {} arguments, but got {}", params.size(), args.size()));
     }
-    const auto oldEnv = env;
     // Create a new environment
-    env = env->createChild(params, args);
+    const auto newEnv = env->createChild(params, args);
     for (size_t i = 0; i < params.size(); i++) {
-        env->addVariable(params[i], args[i]);
+        newEnv->addVariable(params[i], args[i]);
     }
     ValuePtr result = std::make_shared<NilValue>();
     for (const auto& expr : body) {
-        result = env->eval(expr);
+        result = newEnv->eval(expr);
     }
-    env = oldEnv;
     return result;
 }
 

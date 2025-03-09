@@ -66,11 +66,6 @@ const std::unordered_map<std::string, ValuePtr> BUILTINS = {
         throw ValueError("Cannot " #op " a non-numeric value."); \
     }
 
-#define CHECK_EMPTY_PARAMS(name)                                   \
-    if (params.empty()) {                                          \
-        throw ValueError(#name " requires at least one argument"); \
-    }
-
 #define BUILTIN_BINARY_OP(name, op, displayName, initValue, returnTy)                             \
     ValuePtr name(const std::vector<ValuePtr>& params) {                                          \
         CHECK_EMPTY_PARAMS(displayName)                                                           \
@@ -96,15 +91,6 @@ const std::unordered_map<std::string, ValuePtr> BUILTINS = {
         }                                                  \
         return LISP_NUM(result);                           \
     }
-
-#define CHECK_PARAM_NUM(name, num)                                      \
-    if (params.size() != num) {                                         \
-        throw ValueError(#name " requires exactly " #num " arguments"); \
-    }
-
-#define LISP_BOOL(value) std::make_shared<BooleanValue>(value)
-#define LISP_NUM(value) std::make_shared<NumericValue>(value)
-#define LISP_NIL std::make_shared<NilValue>()
 
 #define BUILT_IN_IS_TYPE(name, type)                               \
     ValuePtr builtins::name(const std::vector<ValuePtr>& params) { \

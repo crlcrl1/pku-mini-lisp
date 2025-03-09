@@ -43,13 +43,12 @@ int main(int argc, char* argv[]) {
             }
 
             Parser parser(std::move(tokens));
-            const auto value = parser.parse();
-            const auto result = env->eval(value);
-            if (isRepl) {
-                std::cout << result->toString() << std::endl;
-            }
-            if (input->eof()) {
-                break;
+            while (!parser.empty()) {
+                const auto value = parser.parse();
+                const auto result = env->eval(value);
+                if (isRepl) {
+                    std::cout << result->toString() << std::endl;
+                }
             }
         } catch (std::runtime_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;

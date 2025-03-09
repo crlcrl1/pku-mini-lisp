@@ -22,29 +22,27 @@ const std::unordered_map<std::string, SpecialFormType*> SPECIAL_FORMS = {
 };
 // clang-format on
 
-ValuePtr defineForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    if (const auto name = args[0]->asSymbolName(); name.has_value()) {
-        env.addVariable(*name, env.eval(args[1]));
-    } else if (const auto pair = dynamic_cast<PairValue*>(args[0].get()); pair != nullptr) {
+ValuePtr defineForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    if (const auto name = params[0]->asSymbolName(); name.has_value()) {
+        env.addVariable(*name, env.eval(params[1]));
+    } else if (const auto pair = dynamic_cast<PairValue*>(params[0].get()); pair != nullptr) {
         const auto procName = pair->getCar()->asSymbolName();
         if (!procName.has_value()) {
             throw ValueError("define: expected a symbol as the first argument");
         }
-        std::vector params = {pair->getCdr()};
-        params.insert(params.end(), args.begin() + 1, args.end());
-        const auto lambda = lambdaForm(params, env);
+        std::vector procParams = {pair->getCdr()};
+        procParams.insert(procParams.end(), params.begin() + 1, params.end());
+        const auto lambda = lambdaForm(procParams, env);
         env.addVariable(*procName, lambda);
     } else {
         throw ValueError("define: expected a symbol or a pair as the first argument");
     }
-    return std::make_shared<NilValue>();
+    return LISP_NIL;
 }
 
-ValuePtr quoteForm(const std::vector<ValuePtr>& args, EvalEnv&) {
-    if (args.size() != 1) {
-        throw ValueError(std::format("quote: expected 1 argument, but got {}", args.size()));
-    }
-    return args[0];
+ValuePtr quoteForm(const std::vector<ValuePtr>& params, EvalEnv&) {
+    CHECK_PARAM_NUM(quote, 1);
+    return params[0];
 }
 
 bool convertToBool(const ValuePtr& value) {
@@ -54,56 +52,52 @@ bool convertToBool(const ValuePtr& value) {
     return true;
 }
 
-ValuePtr ifForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    if (args.size() != 3) {
-        throw ValueError(std::format("if: expected 3 arguments, but got {}", args.size()));
+ValuePtr ifForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    CHECK_PARAM_NUM(if, 3);
+    if (const auto condition = env.eval(params[0]); convertToBool(condition)) {
+        return env.eval(params[1]);
     }
-    if (const auto condition = env.eval(args[0]); convertToBool(condition)) {
-        return env.eval(args[1]);
+    if (params.size() == 3) {
+        return env.eval(params[2]);
     }
-    if (args.size() == 3) {
-        return env.eval(args[2]);
-    }
-    return std::make_shared<NilValue>();
+    return LISP_NIL;
 }
 
-ValuePtr andForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    for (const auto& arg : args) {
-        if (const auto value = env.eval(arg); !convertToBool(value)) {
-            return std::make_shared<BooleanValue>(false);
+ValuePtr andForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    for (const auto& param : params) {
+        if (const auto value = env.eval(param); !convertToBool(value)) {
+            return LISP_BOOL(false);
         }
     }
-    const size_t len = args.size();
+    const size_t len = params.size();
     if (len == 0) {
-        return std::make_shared<BooleanValue>(true);
+        return LISP_BOOL(true);
     }
-    return env.eval(args[len - 1]);
+    return env.eval(params[len - 1]);
 }
 
-ValuePtr orForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    for (const auto& arg : args) {
+ValuePtr orForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    for (const auto& arg : params) {
         if (const auto value = env.eval(arg); convertToBool(value)) {
             return value;
         }
     }
-    return std::make_shared<BooleanValue>(false);
+    return LISP_BOOL(false);
 }
 
-ValuePtr lambdaForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    if (args.empty()) {
-        throw ValueError("lambda: expected at least 1 argument");
-    }
-    const auto params = dynamic_cast<PairValue*>(args[0].get());
-    const auto body = std::vector(args.begin() + 1, args.end());
-    if (params == nullptr && args[0]->getType() != ValueType::NIL) {
+ValuePtr lambdaForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    CHECK_EMPTY_PARAMS(lambda);
+    const auto lambdaParams = dynamic_cast<PairValue*>(params[0].get());
+    const auto body = std::vector(params.begin() + 1, params.end());
+    if (lambdaParams == nullptr && params[0]->getType() != ValueType::NIL) {
         throw ValueError("lambda: expected a pair of parameters");
     }
-    if (params == nullptr) {  // no parameters
+    if (lambdaParams == nullptr) {  // no parameters
         return std::make_shared<LambdaValue>(std::vector<std::string>{}, body,
                                              env.createChild({}, {}));
     }
     auto paramsList = std::vector<std::string>{};
-    auto paramsVec = params->toVector();
+    auto paramsVec = lambdaParams->toVector();
     removeTrailingNil(paramsVec);
 
     for (const auto& param : paramsVec) {
@@ -117,19 +111,15 @@ ValuePtr lambdaForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
     return std::make_shared<LambdaValue>(paramsList, body, env.createChild(paramsList, paramsVec));
 }
 
-ValuePtr evalForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    if (args.size() != 1) {
-        throw ValueError(std::format("eval: expected 1 argument, but got {}", args.size()));
-    }
-    return env.eval(env.eval(args[0]));
+ValuePtr evalForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    CHECK_PARAM_NUM(eval, 1);
+    return env.eval(env.eval(params[0]));
 }
 
-ValuePtr condForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    const size_t len = args.size();
-    if (len == 0) {
-        throw ValueError("cond: expected at least 1 argument");
-    }
-    for (auto [i, v] : std::views::enumerate(args)) {
+ValuePtr condForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    CHECK_EMPTY_PARAMS(cond);
+    const size_t len = params.size();
+    for (auto [i, v] : std::views::enumerate(params)) {
         if (v->getType() != ValueType::PAIR) {
             throw ValueError(std::format("cond: expected a pair as the {}-th argument", i + 1));
         }
@@ -169,24 +159,22 @@ ValuePtr condForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
     throw InternalError("cond: unexpected error");
 }
 
-ValuePtr beginForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
+ValuePtr beginForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
     ValuePtr result = std::make_shared<NilValue>();
-    for (const auto& expr : args) {
+    for (const auto& expr : params) {
         result = env.eval(expr);
     }
     return result;
 }
 
-ValuePtr letForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
-    if (args.empty()) {
-        throw ValueError("let: expected at least 1 argument");
-    }
-    if (args[0]->getType() != ValueType::PAIR) {
+ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    CHECK_EMPTY_PARAMS(let);
+    if (params[0]->getType() != ValueType::PAIR) {
         throw ValueError("let: expected a pair as the first argument");
     }
 
     // add variables to the environment
-    const auto varPair = dynamic_cast<PairValue*>(args[0].get());
+    const auto varPair = dynamic_cast<PairValue*>(params[0].get());
     auto varVec = varPair->toVector();
     if (varVec.back()->getType() != ValueType::NIL) {
         throw ValueError("let: expected a list as the first argument");
@@ -219,7 +207,7 @@ ValuePtr letForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
 
     // evaluate the body
     ValuePtr result = std::make_shared<NilValue>();
-    for (const auto& expr : std::vector(args.begin() + 1, args.end())) {
+    for (const auto& expr : std::vector(params.begin() + 1, params.end())) {
         result = env.eval(expr);
     }
 
@@ -235,23 +223,19 @@ ValuePtr letForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
     return result;
 }
 
-ValuePtr quasiquoteForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
+ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
+    CHECK_PARAM_NUM(quasiquote, 1);
     std::vector<ValuePtr> result;
-    if (args.size() != 1) {
-        throw ValueError("quasiquote: expected 1 argument");
+    if (params[0]->getType() != ValueType::PAIR) {
+        return params[0];
     }
-    if (args[0]->getType() != ValueType::PAIR) {
-        return args[0];
-    }
-    const auto argPair = dynamic_cast<PairValue*>(args[0].get());
+    // convert the pair to a vector
+    const auto argPair = dynamic_cast<PairValue*>(params[0].get());
     auto argVec = argPair->toVector();
     if (argVec.empty()) {
-        return args[0];
+        return params[0];
     }
-    if (argVec.back()->getType() != ValueType::NIL) {
-        throw ValueError("quasiquote: expected a list as the argument");
-    }
-    argVec.pop_back();
+    CHECK_LIST(argVec, quasiquote);
     for (const auto& arg : argVec) {
         if (arg->getType() == ValueType::PAIR) {
             const auto pair = dynamic_cast<PairValue*>(arg.get());

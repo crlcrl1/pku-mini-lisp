@@ -3,12 +3,10 @@
 
 #include <deque>
 #include <string>
-#include <utility>
 
-#include "./token.h"
+#include "token.h"
 
 class Tokenizer {
-private:
     TokenPtr nextToken(int& pos) const;
     std::deque<TokenPtr> tokenize() const;
 
