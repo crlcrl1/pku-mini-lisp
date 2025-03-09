@@ -112,15 +112,6 @@ const std::unordered_map<std::string, ValuePtr> BUILTINS = {
         return LISP_BOOL(params[0]->getType() == ValueType::type); \
     }
 
-#define CHECK_LIST(vec, name)                                                 \
-    if (vec.empty()) {                                                        \
-        throw ValueError(#name " requires a non-empty list as its argument"); \
-    }                                                                         \
-    if (vec.back()->getType() != ValueType::NIL) {                            \
-        throw ValueError(#name " requires a list as its argument");           \
-    }                                                                         \
-    vec.pop_back();
-
 const std::set LITERAL_TYPE = {ValueType::BOOLEAN, ValueType::NUMBER, ValueType::NIL,
                                ValueType::SYMBOL};
 

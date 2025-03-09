@@ -23,9 +23,7 @@ EvalEnv::EvalEnv() {
     parent = nullptr;
 }
 
-EvalEnv::EvalEnv(std::shared_ptr<EvalEnv> parent) : parent{std::move(parent)} {
-    addBuiltins();
-}
+EvalEnv::EvalEnv(std::shared_ptr<EvalEnv> parent) : parent{std::move(parent)} {}
 
 std::shared_ptr<EvalEnv> EvalEnv::createEnv() {
     EvalEnv env;
@@ -103,7 +101,6 @@ ValuePtr EvalEnv::apply(const ValuePtr& proc, const std::vector<ValuePtr>& args)
     }
     if (proc->getType() == ValueType::LAMBDA) {
         const auto lambda = dynamic_cast<LambdaValue*>(proc.get());
-        // std::shared_ptr<EvalEnv> env = this->createChild();
         return lambda->apply(args);
     }
     throw UnimplementedError("EvalEnv::apply");

@@ -90,10 +90,17 @@ ValuePtr orForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
 }
 
 ValuePtr lambdaForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
+    if (args.empty()) {
+        throw ValueError("lambda: expected at least 1 argument");
+    }
     const auto params = dynamic_cast<PairValue*>(args[0].get());
     const auto body = std::vector(args.begin() + 1, args.end());
-    if (params == nullptr) {
+    if (params == nullptr && args[0]->getType() != ValueType::NIL) {
         throw ValueError("lambda: expected a pair of parameters");
+    }
+    if (params == nullptr) {  // no parameters
+        return std::make_shared<LambdaValue>(std::vector<std::string>{}, body,
+                                             env.createChild({}, {}));
     }
     auto paramsList = std::vector<std::string>{};
     auto paramsVec = params->toVector();
@@ -129,36 +136,34 @@ ValuePtr condForm(const std::vector<ValuePtr>& args, EvalEnv& env) {
         const auto pair = dynamic_cast<PairValue*>(v.get());
         auto pairVec = pair->toVector();
         // check if the argument is a proper list
-        if (pairVec.empty()) {
-            throw ValueError("cond: expected a non-empty list as the argument");
-        }
-        if (pairVec.back()->getType() != ValueType::NIL) {
-            throw ValueError("cond: expected a list as the argument");
-        }
-        pairVec.pop_back();
+        CHECK_LIST(pairVec, cond);
 
         bool flag = false;
+        ValuePtr result = pairVec[0];
         if (i == len - 1 && pairVec[0]->asSymbolName() == "else") {
             flag = true;
+            result = std::make_shared<BooleanValue>(true);
         } else {
             const auto cond = env.eval(pairVec[0]);
             if (cond->getType() != ValueType::BOOLEAN) {
-                throw ValueError("cond: expected a boolean value as the condition");
+                flag = true;  // any value other than #f is considered true
+            } else {
+                flag = dynamic_cast<BooleanValue*>(cond.get())->getValue();
             }
-            flag = dynamic_cast<BooleanValue*>(cond.get())->getValue();
+            result = cond;
         }
         if (flag) {
-            if (pairVec.size() == 1) {
-                return std::make_shared<BooleanValue>(true);
+            if (pairVec.size() == 1) {  // no consequent, return the condition
+                return result;
             }
-            ValuePtr result = std::make_shared<NilValue>();
+
             for (const auto& expr : std::vector(pairVec.begin() + 1, pairVec.end())) {
                 result = env.eval(expr);
             }
             return result;
         }
         if (i == len - 1) {
-            return std::make_shared<BooleanValue>(flag);
+            return result;
         }
     }
     throw InternalError("cond: unexpected error");

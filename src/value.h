@@ -132,7 +132,7 @@ public:
 class LambdaValue : public Value {
     std::vector<std::string> params;
     std::vector<ValuePtr> body;
-    std::shared_ptr<EvalEnv> env;
+    mutable std::shared_ptr<EvalEnv> env;
 
 public:
     LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body,
