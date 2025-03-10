@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.24.2)
 project(mini_lisp)
 
 option(USE_GTEST "Use GTest" ON)
+option(USE_SANITIZER "Use sanitizer" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -11,12 +12,21 @@ add_executable(mini_lisp ${SOURCES})
 set_target_properties(
         mini_lisp
         PROPERTIES CXX_STANDARD 23
-        CXX_STANDARD_REQUIRED ON
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/bin
-        RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin)
+        CXX_STANDARD_REQUIRED ON)
 if (MSVC)
     target_compile_options(mini_lisp PRIVATE /utf-8 /Zc:preprocessor)
+endif ()
+
+if (USE_SANITIZER)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(mini_lisp PRIVATE -fsanitize=address -fsanitize=undefined)
+        target_link_options(mini_lisp PRIVATE -fsanitize=address -fsanitize=undefined)
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        target_compile_options(mini_lisp PRIVATE -fsanitize=address -fsanitize=undefined)
+        target_link_options(mini_lisp PRIVATE -fsanitize=address -fsanitize=undefined)
+    else ()
+        message(WARNING "Sanitizer is not supported by the compiler")
+    endif ()
 endif ()
 
 if (USE_GTEST)

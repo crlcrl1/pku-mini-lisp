@@ -1,6 +1,7 @@
 #include "value.h"
 
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <ranges>
 #include <sstream>

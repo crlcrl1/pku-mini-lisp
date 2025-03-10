@@ -120,9 +120,7 @@ ValuePtr condForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
     CHECK_EMPTY_PARAMS(cond);
     const size_t len = params.size();
     for (auto [i, v] : std::views::enumerate(params)) {
-        if (v->getType() != ValueType::PAIR) {
-            throw ValueError(std::format("cond: expected a pair as the {}-th argument", i + 1));
-        }
+        CHECK_TYPE(v, PAIR, cond, pair);
         const auto pair = dynamic_cast<PairValue*>(v.get());
         auto pairVec = pair->toVector();
         // check if the argument is a proper list
@@ -132,7 +130,7 @@ ValuePtr condForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
         ValuePtr result = pairVec[0];
         if (i == len - 1 && pairVec[0]->asSymbolName() == "else") {
             flag = true;
-            result = std::make_shared<BooleanValue>(true);
+            result = LISP_BOOL(true);
         } else {
             const auto cond = env.eval(pairVec[0]);
             if (cond->getType() != ValueType::BOOLEAN) {
@@ -169,23 +167,19 @@ ValuePtr beginForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
 
 ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
     CHECK_EMPTY_PARAMS(let);
-    if (params[0]->getType() != ValueType::PAIR) {
-        throw ValueError("let: expected a pair as the first argument");
-    }
+    CHECK_TYPE(params[0], PAIR, let, pair);
 
     // add variables to the environment
     const auto varPair = dynamic_cast<PairValue*>(params[0].get());
     auto varVec = varPair->toVector();
     if (varVec.back()->getType() != ValueType::NIL) {
-        throw ValueError("let: expected a list as the first argument");
+        throw ValueError("let expected a list as the first argument");
     }
     varVec.pop_back();
     std::unordered_map<std::string, std::optional<ValuePtr>> oldVarMap;
     std::unordered_map<std::string, ValuePtr> newVarMap;
     for (const auto& var : varVec) {
-        if (var->getType() != ValueType::PAIR) {
-            throw ValueError("let: expected a list of pairs as the first argument");
-        }
+        CHECK_TYPE(var, PAIR, let, pair);
         const auto pair = dynamic_cast<PairValue*>(var.get());
         auto pairVec = pair->toVector();
         if (pairVec.size() != 3 || pairVec[2]->getType() != ValueType::NIL) {
@@ -206,7 +200,7 @@ ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
     }
 
     // evaluate the body
-    ValuePtr result = std::make_shared<NilValue>();
+    ValuePtr result = LISP_NIL;
     for (const auto& expr : std::vector(params.begin() + 1, params.end())) {
         result = env.eval(expr);
     }
@@ -225,10 +219,9 @@ ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
 
 ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
     CHECK_PARAM_NUM(quasiquote, 1);
+    CHECK_TYPE(params[0], PAIR, quasiquote, pair);
     std::vector<ValuePtr> result;
-    if (params[0]->getType() != ValueType::PAIR) {
-        return params[0];
-    }
+
     // convert the pair to a vector
     const auto argPair = dynamic_cast<PairValue*>(params[0].get());
     auto argVec = argPair->toVector();
@@ -240,9 +233,7 @@ ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
         if (arg->getType() == ValueType::PAIR) {
             const auto pair = dynamic_cast<PairValue*>(arg.get());
             if (pair->getCar()->asSymbolName() == "unquote") {
-                if (pair->getCdr()->getType() != ValueType::PAIR) {
-                    throw ValueError("quasiquote: expected a pair as the argument of unquote");
-                }
+                CHECK_TYPE(pair->getCdr(), PAIR, quasiquote, pair);
                 const auto unquoteArg = dynamic_cast<PairValue*>(pair->getCdr().get())->getCar();
                 result.push_back(env.eval(unquoteArg));
                 continue;
@@ -250,5 +241,5 @@ ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv& env) {
         }
         result.push_back(arg);
     }
-    return std::make_shared<PairValue>(PairValue::fromVector(result));
+    return LISP_PAIR(PairValue::fromVector(result));
 }

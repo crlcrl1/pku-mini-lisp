@@ -20,18 +20,13 @@ void EvalEnv::addBuiltins() {
 
 EvalEnv::EvalEnv() {
     addBuiltins();
-    parent = nullptr;
+    parent = std::nullopt;
 }
 
-EvalEnv::EvalEnv(std::shared_ptr<EvalEnv> parent) : parent{std::move(parent)} {}
+EvalEnv::EvalEnv(const std::shared_ptr<EvalEnv>& parent) : parent{parent} {}
 
 std::shared_ptr<EvalEnv> EvalEnv::createEnv() {
     EvalEnv env;
-    return std::make_shared<EvalEnv>(env);
-}
-
-std::shared_ptr<EvalEnv> EvalEnv::createEnv(std::shared_ptr<EvalEnv> parent) {
-    EvalEnv env(std::move(parent));
     return std::make_shared<EvalEnv>(env);
 }
 
@@ -157,9 +152,9 @@ ValuePtr EvalEnv::lookupBinding(const std::string& name) {
     try {
         return symbolTable.at(name);
     } catch (const std::out_of_range&) {
-        if (parent == nullptr) {
-            throw ValueError(std::format("Undefined variable: {}", name));
+        if (parent.has_value()) {
+            return parent.value().lock()->lookupBinding(name);
         }
-        return parent->lookupBinding(name);
+        throw ValueError(std::format("Undefined variable: {}", name));
     }
 }

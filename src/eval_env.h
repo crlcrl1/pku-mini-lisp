@@ -10,17 +10,16 @@ using ValuePtr = std::shared_ptr<Value>;
 
 class EvalEnv : public std::enable_shared_from_this<EvalEnv> {
     std::unordered_map<std::string, ValuePtr> symbolTable;
-    std::shared_ptr<EvalEnv> parent;
+    std::optional<std::weak_ptr<EvalEnv>> parent;
+
     void addBuiltins();
     ValuePtr lookupBinding(const std::string& name);
 
     EvalEnv();
-
-    explicit EvalEnv(std::shared_ptr<EvalEnv> parent);
+    explicit EvalEnv(const std::shared_ptr<EvalEnv>& parent);
 
 public:
     static std::shared_ptr<EvalEnv> createEnv();
-    static std::shared_ptr<EvalEnv> createEnv(std::shared_ptr<EvalEnv> parent);
 
     /**
      * Evaluate an expression

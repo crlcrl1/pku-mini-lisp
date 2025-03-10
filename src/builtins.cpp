@@ -113,14 +113,9 @@ BUILTIN_BINARY_OP(builtins::le, <=, Greater than, 0.0, BooleanValue)
 BUILTIN_BINARY_OP(builtins::ge, >=, Greater than, 0.0, BooleanValue)
 
 ValuePtr builtins::apply(const std::vector<ValuePtr>& params) {
-    CHECK_EMPTY_PARAMS(apply);
-    if (params.size() != 2) {
-        throw ValueError("apply requires exactly two arguments");
-    }
+    CHECK_PARAM_NUM(apply, 2);
+    CHECK_TYPE(params[1], PAIR, apply, list);
     auto param = dynamic_cast<PairValue*>(params[1].get());
-    if (param == nullptr) {
-        throw ValueError("apply requires a list as its second argument");
-    }
     auto paramList = param->toVector();
     removeTrailingNil(paramList);
     return EvalEnv::apply(params[0], paramList);
@@ -184,9 +179,7 @@ ValuePtr builtins::length(const std::vector<ValuePtr>& params) {
     if (params[0]->getType() == ValueType::NIL) {
         return LISP_NUM(0);
     }
-    if (params[0]->getType() != ValueType::PAIR) {
-        throw ValueError("length requires a list as its argument");
-    }
+    CHECK_TYPE(params[0], PAIR, length, list);
     const auto first = dynamic_cast<PairValue*>(params[0].get());
     const auto values = first->toVector();
     size_t size = values.size();
@@ -198,18 +191,14 @@ ValuePtr builtins::length(const std::vector<ValuePtr>& params) {
 
 ValuePtr builtins::car(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(car, 1);
-    if (params[0]->getType() != ValueType::PAIR) {
-        throw ValueError("car requires a list as its argument");
-    }
+    CHECK_TYPE(params[0], PAIR, car, list);
     const auto first = dynamic_cast<PairValue*>(params[0].get());
     return first->getCar();
 }
 
 ValuePtr builtins::cdr(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(cdr, 1);
-    if (params[0]->getType() != ValueType::PAIR) {
-        throw ValueError("cdr requires a list as its argument");
-    }
+    CHECK_TYPE(params[0], PAIR, cdr, list);
     const auto first = dynamic_cast<PairValue*>(params[0].get());
     return first->getCdr();
 }
@@ -267,34 +256,30 @@ ValuePtr builtins::append(const std::vector<ValuePtr>& params) {
         if (i->getType() == ValueType::NIL) {
             continue;
         }
-        if (i->getType() != ValueType::PAIR) {
-            throw ValueError("append requires a list as its argument");
-        }
+        CHECK_TYPE(i, PAIR, append, list);
         const auto pair = dynamic_cast<PairValue*>(i.get());
         auto vec = pair->toVector();
         CHECK_LIST(vec, append);
         result.insert(result.end(), vec.begin(), vec.end());
     }
-    return std::make_shared<PairValue>(PairValue::fromVector(result));
+    return LISP_PAIR(PairValue::fromVector(result));
 }
 
 ValuePtr builtins::cons(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(cons, 2);
-    return std::make_shared<PairValue>(params[0], params[1]);
+    return LISP_PAIR(params[0], params[1]);
 }
 
 ValuePtr builtins::makeList(const std::vector<ValuePtr>& params) {
     if (params.empty()) {
         return LISP_NIL;
     }
-    return std::make_shared<PairValue>(PairValue::fromVector(params));
+    return LISP_PAIR(PairValue::fromVector(params));
 }
 
 ValuePtr builtins::map(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(map, 2);
-    if (params[1]->getType() != ValueType::PAIR) {
-        throw ValueError("map requires a list as its argument");
-    }
+    CHECK_TYPE(params[1], PAIR, map, list);
     const auto& func = params[0];
     const auto arg = dynamic_cast<PairValue*>(params[1].get());
     auto vec = arg->toVector();
@@ -303,14 +288,12 @@ ValuePtr builtins::map(const std::vector<ValuePtr>& params) {
     for (const auto& i : vec) {
         result.push_back(EvalEnv::apply(func, {i}));
     }
-    return std::make_shared<PairValue>(PairValue::fromVector(result));
+    return LISP_PAIR(PairValue::fromVector(result));
 }
 
 ValuePtr builtins::filter(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(filter, 2);
-    if (params[1]->getType() != ValueType::PAIR) {
-        throw ValueError("filter requires a list as its argument");
-    }
+    CHECK_TYPE(params[1], PAIR, filter, list);
     const auto& func = params[0];
     const auto arg = dynamic_cast<PairValue*>(params[1].get());
     auto vec = arg->toVector();
@@ -325,14 +308,12 @@ ValuePtr builtins::filter(const std::vector<ValuePtr>& params) {
             result.push_back(i);
         }
     }
-    return std::make_shared<PairValue>(PairValue::fromVector(result));
+    return LISP_PAIR(PairValue::fromVector(result));
 }
 
 ValuePtr builtins::reduce(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(reduce, 2);
-    if (params[1]->getType() != ValueType::PAIR) {
-        throw ValueError("reduce requires a list as its argument");
-    }
+    CHECK_TYPE(params[1], PAIR, reduce, list);
     const auto& func = params[0];
     const auto arg = dynamic_cast<PairValue*>(params[1].get());
     auto cdr = arg->getCdr();
@@ -344,9 +325,7 @@ ValuePtr builtins::reduce(const std::vector<ValuePtr>& params) {
 
 ValuePtr builtins::abs(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(abs, 1);
-    if (!params[0]->isNumber()) {
-        throw ValueError("abs requires a number as its argument");
-    }
+    CHECK_TYPE(params[0], NUMBER, abs, number);
     return LISP_NUM(std::abs(*params[0]->asNumber()));
 }
 
@@ -418,24 +397,18 @@ ValuePtr builtins::logicalNot(const std::vector<ValuePtr>& params) {
 
 ValuePtr builtins::even(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(even, 1);
-    if (!params[0]->isNumber()) {
-        throw ValueError("even requires a number as its argument");
-    }
+    CHECK_TYPE(params[0], NUMBER, even, number);
     return LISP_BOOL(std::abs(std::remainder(*params[0]->asNumber(), 2)) <= 1e-7);
 }
 
 ValuePtr builtins::odd(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(odd, 1);
-    if (!params[0]->isNumber()) {
-        throw ValueError("odd requires a number as its argument");
-    }
+    CHECK_TYPE(params[0], NUMBER, odd, number);
     return LISP_BOOL(std::abs(std::abs(std::remainder(*params[0]->asNumber(), 2)) - 1) <= 1e-7);
 }
 
 ValuePtr builtins::zero(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(zero, 1);
-    if (!params[0]->isNumber()) {
-        throw ValueError("zero requires a number as its argument");
-    }
+    CHECK_TYPE(params[0], NUMBER, zero, number);
     return LISP_BOOL(std::abs(*params[0]->asNumber()) <= 1e-7);
 }
