@@ -1,34 +1,21 @@
 #include "parser.h"
 
 #include "error.h"
+#include "pool.h"
 #include "token.h"
 #include "utils.h"
 #include "value.h"
 
-/**
- * Return a value if the token matches the given type.
- *
- * @param token token to parse
- * @param tokenTy the type of token to match
- * @param valueTy the type of value to return
- */
 #define RETURN_VALUE_IF_MATCH(token, tokenTy, valueTy)                \
     if (auto t = dynamic_cast<tokenTy*>(token.get()); t != nullptr) { \
-        return std::make_shared<valueTy>(t->getValue());              \
+        return pool.makeValue<valueTy>(t->getValue());                \
     }
 
-/**
- * Return a quote value if the token matches the given type.
- *
- * @param token token to parse
- * @param tokenTy enum member of TokenType to match
- * @param symbolName the name of the quote token
- */
-#define RETURN_QUOTE_IF_MATCH(token, tokenTy, symbolName)                              \
-    if (token->getType() == TokenType::tokenTy) {                                      \
-        return std::make_shared<PairValue>(                                            \
-            std::make_shared<SymbolValue>(#symbolName),                                \
-            std::make_shared<PairValue>(this->parse(), std::make_shared<NilValue>())); \
+#define RETURN_QUOTE_IF_MATCH(token, tokenTy, symbolName)                          \
+    if (token->getType() == TokenType::tokenTy) {                                  \
+        return pool.makeValue<PairValue>(                                          \
+            pool.makeValue<SymbolValue>(#symbolName),                              \
+            pool.makeValue<PairValue>(this->parse(), pool.makeValue<NilValue>())); \
     }
 
 Parser::Parser(std::deque<TokenPtr> tokens) : tokens(std::move(tokens)) {}

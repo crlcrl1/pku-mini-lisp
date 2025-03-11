@@ -5,11 +5,16 @@
 
 #include "eval_env.h"
 #include "parser.h"
+#include "pool.h"
 #include "tokenizer.h"
 #include "value.h"
 
+#ifdef USE_LLVM
+#include "llvm/jit.h"
+#endif
+
 int main(int argc, char* argv[]) {
-    const auto env = EvalEnv::createEnv();
+    const auto env = pool.root();
     if (argc > 2) {
         std::cerr << "Usage: " << argv[0] << " [script]" << std::endl;
     }
@@ -32,7 +37,13 @@ int main(int argc, char* argv[]) {
         isRepl = true;
     }
 
+#ifdef USE_LLVM
+    jit::initializeLLVM();
+#endif
+
+    int loop_cnt = 0;
     while (true) {
+        loop_cnt++;
         try {
             auto tokens = Tokenizer::fromStream(input, isRepl);
             if (tokens.empty()) {
@@ -53,10 +64,21 @@ int main(int argc, char* argv[]) {
         } catch (std::runtime_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;
         }
+        if (isRepl) {
+            pool.gc();
+            continue;
+        }
+        if (loop_cnt % 4 == 0) {
+            pool.gc();
+        }
     }
 
     if (!isRepl) {
         delete input;
     }
+    pool.gc();
+#ifdef USE_LLVM
+    jit::finalizeLLVM();
+#endif
     return 0;
 }

@@ -14,6 +14,7 @@ A simple Lisp interpreter implemented in C++.
 - [x] Nested function calls
 - [x] Conditional expressions
 - [x] Lambda expressions
+- [x] Garbage collection with mark-and-sweep algorithm
 - [ ] JIT compilation with LLVM
 
 ## How to build the project

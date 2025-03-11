@@ -43,9 +43,9 @@ std::deque<T> merge(std::deque<T> a, std::deque<T> b) {
         throw TypeError(#name " requires a " #typeName " as its argument"); \
     }
 
-#define LISP_BOOL(value) std::make_shared<BooleanValue>(value)
-#define LISP_NUM(value) std::make_shared<NumericValue>(value)
-#define LISP_NIL std::make_shared<NilValue>()
-#define LISP_PAIR(...) std::make_shared<PairValue>(__VA_ARGS__)
+#define LISP_BOOL(value) pool.makeValue<BooleanValue>(value)
+#define LISP_NUM(value) pool.makeValue<NumericValue>(value)
+#define LISP_NIL pool.makeValue<NilValue>()
+#define LISP_PAIR(...) pool.makeValue<PairValue>(__VA_ARGS__)
 
 #endif  // UTILS_H

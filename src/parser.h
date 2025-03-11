@@ -7,7 +7,7 @@
 class Value;
 class Token;
 
-using ValuePtr = std::shared_ptr<Value>;
+using ValuePtr = Value*;
 using TokenPtr = std::unique_ptr<Token>;
 
 class Parser {

@@ -1,23 +1,17 @@
 #ifndef VALUE_H
 #define VALUE_H
 
-#include <memory>
+#include <iostream>
 #include <set>
 #include <string>
 #include <vector>
 
 class Value;
 
-using ValuePtr = std::shared_ptr<Value>;
+using ValuePtr = Value*;
 
 class EvalEnv;
 class SymbolValue;
-
-enum class Keyword {
-    DEFINE,
-    LAMBDA,
-    INVALID,
-};
 
 enum class ValueType {
     BOOLEAN,
@@ -35,16 +29,17 @@ class Value {
 
 public:
     explicit Value(const ValueType ty) : ty{ty} {}
-
     virtual ~Value() = default;
+
     virtual std::string toString() const = 0;
     ValueType getType() const;
-    std::optional<Keyword> asKeyword() const;
     std::optional<std::string> asSymbolName() const;
     bool isNumber() const;
     std::optional<double> asNumber() const;
     bool isAtom() const;
     virtual bool equals(const ValuePtr& other) const = 0;
+
+    static std::vector<ValuePtr> children(ValuePtr value);
 };
 
 using BuiltinFuncType = ValuePtr(const std::vector<ValuePtr>&);
@@ -106,8 +101,7 @@ class PairValue : public Value {
     ValuePtr cdr;
 
 public:
-    PairValue(ValuePtr car, ValuePtr cdr)
-        : Value(ValueType::PAIR), car{std::move(car)}, cdr{std::move(cdr)} {}
+    PairValue(ValuePtr car, ValuePtr cdr) : Value(ValueType::PAIR), car{car}, cdr{cdr} {}
 
     std::string toString() const override;
 
@@ -136,18 +130,19 @@ public:
 };
 
 class LambdaValue : public Value {
+protected:
     std::vector<std::string> params;
     std::vector<ValuePtr> body;
-    mutable std::shared_ptr<EvalEnv> env;
+    mutable EvalEnv* env;
 
 public:
-    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body,
-                const std::shared_ptr<EvalEnv>& env)
-        : Value(ValueType::LAMBDA), params(std::move(params)), body(std::move(body)), env(env) {}
+    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body, EvalEnv* env);
 
     std::string toString() const override;
-    ValuePtr apply(const std::vector<ValuePtr>& args) const;
+    virtual ValuePtr apply(const std::vector<ValuePtr>& args) const;
     bool equals(const ValuePtr& other) const override;
+
+    friend class ValuePool;
 };
 
 extern const std::set<ValueType> SELF_EVAL_VALUES;

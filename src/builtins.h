@@ -6,8 +6,6 @@
 
 #include "value.h"
 
-extern const std::unordered_map<std::string, ValuePtr> BUILTINS;
-
 namespace builtins {
 
 ValuePtr add(const std::vector<ValuePtr>& params);

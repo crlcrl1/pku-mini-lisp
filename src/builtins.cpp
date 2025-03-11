@@ -5,81 +5,28 @@
 
 #include "error.h"
 #include "eval_env.h"
+#include "pool.h"
 #include "utils.h"
-
-#define BUILTIN_PAIR(procName, builtinName) \
-    std::make_pair(#builtinName, std::make_shared<BuiltinProcValue>(&builtins::procName))
-
-// clang-format off
-const std::unordered_map<std::string, ValuePtr> BUILTINS = {
-    BUILTIN_PAIR(add, +),
-    BUILTIN_PAIR(sub, -),
-    BUILTIN_PAIR(mul, *),
-    BUILTIN_PAIR(div, /),
-    BUILTIN_PAIR(eq, =),
-    BUILTIN_PAIR(lt, <),
-    BUILTIN_PAIR(gt, >),
-    BUILTIN_PAIR(le, <=),
-    BUILTIN_PAIR(ge, >=),
-    BUILTIN_PAIR(apply, apply),
-    BUILTIN_PAIR(display, display),
-    BUILTIN_PAIR(print, print),
-    BUILTIN_PAIR(exit, exit),
-    BUILTIN_PAIR(length, length),
-    BUILTIN_PAIR(car, car),
-    BUILTIN_PAIR(cdr, cdr),
-    BUILTIN_PAIR(displayln, displayln),
-    BUILTIN_PAIR(newline, newline),
-    BUILTIN_PAIR(error, error),
-    BUILTIN_PAIR(atom, atom?),
-    BUILTIN_PAIR(boolean, boolean?),
-    BUILTIN_PAIR(integer, integer?),
-    BUILTIN_PAIR(isList, list?),
-    BUILTIN_PAIR(number, number?),
-    BUILTIN_PAIR(null, null?),
-    BUILTIN_PAIR(pair, pair?),
-    BUILTIN_PAIR(string, string?),
-    BUILTIN_PAIR(symbol, symbol?),
-    BUILTIN_PAIR(procedure, procedure?),
-    BUILTIN_PAIR(append, append),
-    BUILTIN_PAIR(cons, cons),
-    BUILTIN_PAIR(makeList, list),
-    BUILTIN_PAIR(map, map),
-    BUILTIN_PAIR(filter, filter),
-    BUILTIN_PAIR(reduce, reduce),
-    BUILTIN_PAIR(abs, abs),
-    BUILTIN_PAIR(expt, expt),
-    BUILTIN_PAIR(quotient, quotient),
-    BUILTIN_PAIR(modulo, modulo),
-    BUILTIN_PAIR(remainder, remainder),
-    BUILTIN_PAIR(loceq, eq?),
-    BUILTIN_PAIR(dataeq, equal?),
-    BUILTIN_PAIR(logicalNot, not),
-    BUILTIN_PAIR(even, even?),
-    BUILTIN_PAIR(odd, odd?),
-    BUILTIN_PAIR(zero, zero?),
-};
-// clang-format on
 
 #define BUILTIN_NUMBER_CHECK(var, op)                            \
     if (!var->isNumber()) {                                      \
         throw ValueError("Cannot " #op " a non-numeric value."); \
     }
 
-#define BUILTIN_BINARY_OP(name, op, displayName, initValue, returnTy)                             \
-    ValuePtr name(const std::vector<ValuePtr>& params) {                                          \
-        CHECK_EMPTY_PARAMS(displayName)                                                           \
-        const size_t numParams = params.size();                                                   \
-        if (numParams == 1) {                                                                     \
-            BUILTIN_NUMBER_CHECK(params[0], subtract);                                            \
-            return std::make_shared<returnTy>(initValue op * params[0]->asNumber());              \
-        }                                                                                         \
-        if (numParams == 2) {                                                                     \
-            BUILTIN_NUMBER_CHECK(params[0], subtract);                                            \
-            BUILTIN_NUMBER_CHECK(params[1], subtract);                                            \
-            return std::make_shared<returnTy>(*params[0]->asNumber() op * params[1]->asNumber()); \
-        }                                                                                         \
-        throw ValueError(#displayName " requires exactly one or two arguments.");                 \
+#define BUILTIN_BINARY_OP(name, op, displayName, initValue, returnTy)                           \
+    ValuePtr name(const std::vector<ValuePtr>& params) {                                        \
+        CHECK_EMPTY_PARAMS(displayName)                                                         \
+        const size_t numParams = params.size();                                                 \
+        if (numParams == 1) {                                                                   \
+            BUILTIN_NUMBER_CHECK(params[0], subtract);                                          \
+            return pool.makeValue<returnTy>(initValue op * params[0]->asNumber());              \
+        }                                                                                       \
+        if (numParams == 2) {                                                                   \
+            BUILTIN_NUMBER_CHECK(params[0], subtract);                                          \
+            BUILTIN_NUMBER_CHECK(params[1], subtract);                                          \
+            return pool.makeValue<returnTy>(*params[0]->asNumber() op * params[1]->asNumber()); \
+        }                                                                                       \
+        throw ValueError(#displayName " requires exactly one or two arguments.");               \
     }
 
 #define BUILTIN_MULTI_OP(name, op, displayName, initValue) \
@@ -115,7 +62,7 @@ BUILTIN_BINARY_OP(builtins::ge, >=, Greater than, 0.0, BooleanValue)
 ValuePtr builtins::apply(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(apply, 2);
     CHECK_TYPE(params[1], PAIR, apply, list);
-    auto param = dynamic_cast<PairValue*>(params[1].get());
+    auto param = dynamic_cast<PairValue*>(params[1]);
     auto paramList = param->toVector();
     removeTrailingNil(paramList);
     return EvalEnv::apply(params[0], paramList);
@@ -180,7 +127,7 @@ ValuePtr builtins::length(const std::vector<ValuePtr>& params) {
         return LISP_NUM(0);
     }
     CHECK_TYPE(params[0], PAIR, length, list);
-    const auto first = dynamic_cast<PairValue*>(params[0].get());
+    const auto first = dynamic_cast<PairValue*>(params[0]);
     const auto values = first->toVector();
     size_t size = values.size();
     if (values.back()->getType() == ValueType::NIL) {
@@ -192,14 +139,14 @@ ValuePtr builtins::length(const std::vector<ValuePtr>& params) {
 ValuePtr builtins::car(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(car, 1);
     CHECK_TYPE(params[0], PAIR, car, list);
-    const auto first = dynamic_cast<PairValue*>(params[0].get());
+    const auto first = dynamic_cast<PairValue*>(params[0]);
     return first->getCar();
 }
 
 ValuePtr builtins::cdr(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(cdr, 1);
     CHECK_TYPE(params[0], PAIR, cdr, list);
-    const auto first = dynamic_cast<PairValue*>(params[0].get());
+    const auto first = dynamic_cast<PairValue*>(params[0]);
     return first->getCdr();
 }
 
@@ -225,7 +172,7 @@ ValuePtr builtins::isList(const std::vector<ValuePtr>& params) {
     if (params[0]->getType() != ValueType::PAIR) {
         return LISP_BOOL(false);
     }
-    const auto arg = dynamic_cast<PairValue*>(params[0].get());
+    const auto arg = dynamic_cast<PairValue*>(params[0]);
     if (arg == nullptr) {
         throw ValueError("list? requires a pair as its argument");
     }
@@ -257,7 +204,7 @@ ValuePtr builtins::append(const std::vector<ValuePtr>& params) {
             continue;
         }
         CHECK_TYPE(i, PAIR, append, list);
-        const auto pair = dynamic_cast<PairValue*>(i.get());
+        const auto pair = dynamic_cast<PairValue*>(i);
         auto vec = pair->toVector();
         CHECK_LIST(vec, append);
         result.insert(result.end(), vec.begin(), vec.end());
@@ -281,7 +228,7 @@ ValuePtr builtins::map(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(map, 2);
     CHECK_TYPE(params[1], PAIR, map, list);
     const auto& func = params[0];
-    const auto arg = dynamic_cast<PairValue*>(params[1].get());
+    const auto arg = dynamic_cast<PairValue*>(params[1]);
     auto vec = arg->toVector();
     CHECK_LIST(vec, map);
     std::vector<ValuePtr> result;
@@ -295,7 +242,7 @@ ValuePtr builtins::filter(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(filter, 2);
     CHECK_TYPE(params[1], PAIR, filter, list);
     const auto& func = params[0];
-    const auto arg = dynamic_cast<PairValue*>(params[1].get());
+    const auto arg = dynamic_cast<PairValue*>(params[1]);
     auto vec = arg->toVector();
     CHECK_LIST(vec, filter);
     std::vector<ValuePtr> result;
@@ -304,7 +251,7 @@ ValuePtr builtins::filter(const std::vector<ValuePtr>& params) {
         if (res->getType() != ValueType::BOOLEAN) {
             throw ValueError("filter function must return a boolean value");
         }
-        if (dynamic_cast<BooleanValue*>(res.get())->getValue()) {
+        if (dynamic_cast<BooleanValue*>(res)->getValue()) {
             result.push_back(i);
         }
     }
@@ -315,7 +262,7 @@ ValuePtr builtins::reduce(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(reduce, 2);
     CHECK_TYPE(params[1], PAIR, reduce, list);
     const auto& func = params[0];
-    const auto arg = dynamic_cast<PairValue*>(params[1].get());
+    const auto arg = dynamic_cast<PairValue*>(params[1]);
     auto cdr = arg->getCdr();
     if (cdr->getType() == ValueType::NIL) {
         return arg->getCar();
@@ -378,7 +325,7 @@ ValuePtr builtins::loceq(const std::vector<ValuePtr>& params) {
         return LISP_BOOL(params[0]->equals(params[1]));
     }
 
-    return LISP_BOOL(params[0].get() == params[1].get());
+    return LISP_BOOL(params[0] == params[1]);
 }
 
 ValuePtr builtins::dataeq(const std::vector<ValuePtr>& params) {
@@ -392,7 +339,7 @@ ValuePtr builtins::logicalNot(const std::vector<ValuePtr>& params) {
     if (params[0]->getType() != ValueType::BOOLEAN) {
         return LISP_BOOL(false);
     }
-    return LISP_BOOL(!dynamic_cast<BooleanValue*>(params[0].get())->getValue());
+    return LISP_BOOL(!dynamic_cast<BooleanValue*>(params[0])->getValue());
 }
 
 ValuePtr builtins::even(const std::vector<ValuePtr>& params) {

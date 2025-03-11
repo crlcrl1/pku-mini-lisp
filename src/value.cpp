@@ -1,14 +1,14 @@
 #include "value.h"
 
 #include <iomanip>
-#include <iostream>
 #include <memory>
 #include <ranges>
 #include <sstream>
-#include <unordered_map>
 
 #include "error.h"
 #include "eval_env.h"
+#include "pool.h"
+#include "utils.h"
 
 const std::set<ValueType> SELF_EVAL_VALUES = {
     ValueType::BOOLEAN,
@@ -20,23 +20,8 @@ const std::set<ValueType> ATOMIC_VALUES = {
     ValueType::BOOLEAN, ValueType::NUMBER, ValueType::STRING, ValueType::NIL, ValueType::SYMBOL,
 };
 
-const std::unordered_map<std::string, Keyword> KEYWORD_MAP = {
-    {"define", Keyword::DEFINE},
-    {"lambda", Keyword::LAMBDA},
-};
-
 ValueType Value::getType() const {
     return ty;
-}
-
-std::optional<Keyword> Value::asKeyword() const {
-    if (ty == ValueType::SYMBOL) {
-        const auto symbolName = dynamic_cast<const SymbolValue*>(this)->getValue();
-        if (const auto it = KEYWORD_MAP.find(symbolName); it != KEYWORD_MAP.end()) {
-            return it->second;
-        }
-    }
-    return std::nullopt;
 }
 
 std::optional<std::string> Value::asSymbolName() const {
@@ -62,6 +47,22 @@ bool Value::isAtom() const {
     return ATOMIC_VALUES.contains(ty);
 }
 
+std::vector<ValuePtr> Value::children(ValuePtr value) {
+    if (value->getType() != ValueType::PAIR) {
+        return {};
+    }
+    std::vector<ValuePtr> children;
+    auto pair = dynamic_cast<PairValue*>(value);
+    children.push_back(pair->getCar());
+    children.push_back(pair->getCdr());
+
+    auto carChildren = Value::children(pair->getCar());
+    auto cdrChildren = Value::children(pair->getCdr());
+    children.insert(children.end(), carChildren.begin(), carChildren.end());
+    children.insert(children.end(), cdrChildren.begin(), cdrChildren.end());
+    return children;
+}
+
 std::string BooleanValue::toString() const {
     return value ? "#t" : "#f";
 }
@@ -74,7 +75,7 @@ bool BooleanValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::BOOLEAN) {
         return false;
     }
-    return value == dynamic_cast<BooleanValue*>(other.get())->getValue();
+    return value == dynamic_cast<BooleanValue*>(other)->getValue();
 }
 
 std::string NumericValue::toString() const {
@@ -96,7 +97,7 @@ bool NumericValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::NUMBER) {
         return false;
     }
-    return value == dynamic_cast<NumericValue*>(other.get())->getValue();
+    return value == dynamic_cast<NumericValue*>(other)->getValue();
 }
 
 std::string StringValue::toString() const {
@@ -113,7 +114,7 @@ bool StringValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::STRING) {
         return false;
     }
-    return value == dynamic_cast<StringValue*>(other.get())->getValue();
+    return value == dynamic_cast<StringValue*>(other)->getValue();
 }
 
 std::string SymbolValue::toString() const {
@@ -128,7 +129,7 @@ bool SymbolValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::SYMBOL) {
         return false;
     }
-    return value == dynamic_cast<SymbolValue*>(other.get())->getValue();
+    return value == dynamic_cast<SymbolValue*>(other)->getValue();
 }
 
 std::string PairValue::toString() const {
@@ -158,7 +159,7 @@ std::vector<ValuePtr> PairValue::toVector() const {
     while (true) {
         result.push_back(current->car);
         if (current->cdr->getType() == ValueType::PAIR) {
-            current = dynamic_cast<PairValue*>(current->cdr.get());
+            current = dynamic_cast<PairValue*>(current->cdr);
         } else {
             result.push_back(current->cdr);
             break;
@@ -169,11 +170,11 @@ std::vector<ValuePtr> PairValue::toVector() const {
 
 PairValue PairValue::fromVector(const std::vector<ValuePtr>& vec) {
     if (vec.empty()) {
-        return {std::make_shared<NilValue>(), std::make_shared<NilValue>()};
+        return {LISP_NIL, LISP_NIL};
     }
-    auto current = PairValue(vec.back(), std::make_shared<NilValue>());
+    auto current = PairValue(vec.back(), LISP_NIL);
     for (auto it = vec.rbegin() + 1; it != vec.rend(); ++it) {
-        current = PairValue(*it, std::make_shared<PairValue>(current));
+        current = PairValue(*it, LISP_PAIR(current));
     }
     return current;
 }
@@ -190,7 +191,7 @@ bool PairValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::PAIR) {
         return false;
     }
-    const auto otherPair = dynamic_cast<PairValue*>(other.get());
+    const auto otherPair = dynamic_cast<PairValue*>(other);
     return car->equals(otherPair->car) && cdr->equals(otherPair->cdr);
 }
 
@@ -206,8 +207,11 @@ bool BuiltinProcValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::BUILTIN) {
         return false;
     }
-    return func == dynamic_cast<BuiltinProcValue*>(other.get())->func;
+    return func == dynamic_cast<BuiltinProcValue*>(other)->func;
 }
+
+LambdaValue::LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body, EvalEnv* env)
+    : Value(ValueType::LAMBDA), params(std::move(params)), body(std::move(body)), env(env) {}
 
 std::string LambdaValue::toString() const {
     return "#<proc>";
@@ -219,11 +223,11 @@ ValuePtr LambdaValue::apply(const std::vector<ValuePtr>& args) const {
             std::format("Expected {} arguments, but got {}", params.size(), args.size()));
     }
     // Create a new environment
-    const auto newEnv = env->createChild(params, args);
+    const auto newEnv = pool.makeEnv(env);
     for (size_t i = 0; i < params.size(); i++) {
         newEnv->addVariable(params[i], args[i]);
     }
-    ValuePtr result = std::make_shared<NilValue>();
+    ValuePtr result = LISP_NIL;
     for (const auto& expr : body) {
         result = newEnv->eval(expr);
     }
@@ -234,7 +238,7 @@ bool LambdaValue::equals(const ValuePtr& other) const {
     if (other->getType() != ValueType::LAMBDA) {
         return false;
     }
-    const auto otherLambda = dynamic_cast<LambdaValue*>(other.get());
+    const auto otherLambda = dynamic_cast<LambdaValue*>(other);
     return params == otherLambda->params && body == otherLambda->body;
 }
 

@@ -6,21 +6,19 @@
 #include <vector>
 
 class Value;
-using ValuePtr = std::shared_ptr<Value>;
+using ValuePtr = Value*;
 
-class EvalEnv : public std::enable_shared_from_this<EvalEnv> {
+class EvalEnv {
     std::unordered_map<std::string, ValuePtr> symbolTable;
-    std::optional<std::weak_ptr<EvalEnv>> parent;
+    const EvalEnv* parent;
 
     void addBuiltins();
-    ValuePtr lookupBinding(const std::string& name);
+    ValuePtr lookupBinding(const std::string& name) const;
 
     EvalEnv();
-    explicit EvalEnv(const std::shared_ptr<EvalEnv>& parent);
+    explicit EvalEnv(const EvalEnv* parent);
 
 public:
-    static std::shared_ptr<EvalEnv> createEnv();
-
     /**
      * Evaluate an expression
      * @param expr expression to evaluate
@@ -48,8 +46,7 @@ public:
 
     bool removeVariable(const std::string& name);
 
-    std::shared_ptr<EvalEnv> createChild(const std::vector<std::string>& params,
-                                         const std::vector<ValuePtr>& args);
+    friend class ValuePool;
 };
 
 #endif  // EVAL_ENV_H

@@ -2,33 +2,79 @@
 
 #include <algorithm>
 #include <iterator>
-#include <memory>
 #include <set>
 #include <utility>
 
 #include "builtins.h"
 #include "error.h"
 #include "forms.h"
+#include "pool.h"
 #include "utils.h"
 #include "value.h"
 
+#define BUILTIN_PAIR(procName, builtinName) \
+    {#builtinName, pool.makeValue<BuiltinProcValue>(&builtins::procName)}
+
 void EvalEnv::addBuiltins() {
-    for (const auto& i : BUILTINS) {
+    const std::unordered_map<std::string, ValuePtr> builtins = {
+        BUILTIN_PAIR(add, +),
+        BUILTIN_PAIR(sub, -),
+        BUILTIN_PAIR(mul, *),
+        BUILTIN_PAIR(div, /),
+        BUILTIN_PAIR(eq, =),
+        BUILTIN_PAIR(lt, <),
+        BUILTIN_PAIR(gt, >),
+        BUILTIN_PAIR(le, <=),
+        BUILTIN_PAIR(ge, >=),
+        BUILTIN_PAIR(apply, apply),
+        BUILTIN_PAIR(display, display),
+        BUILTIN_PAIR(print, print),
+        BUILTIN_PAIR(exit, exit),
+        BUILTIN_PAIR(length, length),
+        BUILTIN_PAIR(car, car),
+        BUILTIN_PAIR(cdr, cdr),
+        BUILTIN_PAIR(displayln, displayln),
+        BUILTIN_PAIR(newline, newline),
+        BUILTIN_PAIR(error, error),
+        BUILTIN_PAIR(atom, atom?),
+        BUILTIN_PAIR(boolean, boolean?),
+        BUILTIN_PAIR(integer, integer?),
+        BUILTIN_PAIR(isList, list?),
+        BUILTIN_PAIR(number, number?),
+        BUILTIN_PAIR(null, null?),
+        BUILTIN_PAIR(pair, pair?),
+        BUILTIN_PAIR(string, string?),
+        BUILTIN_PAIR(symbol, symbol?),
+        BUILTIN_PAIR(procedure, procedure?),
+        BUILTIN_PAIR(append, append),
+        BUILTIN_PAIR(cons, cons),
+        BUILTIN_PAIR(makeList, list),
+        BUILTIN_PAIR(map, map),
+        BUILTIN_PAIR(filter, filter),
+        BUILTIN_PAIR(reduce, reduce),
+        BUILTIN_PAIR(abs, abs),
+        BUILTIN_PAIR(expt, expt),
+        BUILTIN_PAIR(quotient, quotient),
+        BUILTIN_PAIR(modulo, modulo),
+        BUILTIN_PAIR(remainder, remainder),
+        BUILTIN_PAIR(loceq, eq?),
+        BUILTIN_PAIR(dataeq, equal?),
+        BUILTIN_PAIR(logicalNot, not),
+        BUILTIN_PAIR(even, even?),
+        BUILTIN_PAIR(odd, odd?),
+        BUILTIN_PAIR(zero, zero?),
+    };
+
+    for (const auto& i : builtins) {
         this->symbolTable.insert(i);
     }
 }
 
 EvalEnv::EvalEnv() {
-    addBuiltins();
-    parent = std::nullopt;
+    parent = nullptr;
 }
 
-EvalEnv::EvalEnv(const std::shared_ptr<EvalEnv>& parent) : parent{parent} {}
-
-std::shared_ptr<EvalEnv> EvalEnv::createEnv() {
-    EvalEnv env;
-    return std::make_shared<EvalEnv>(env);
-}
+EvalEnv::EvalEnv(const EvalEnv* parent) : parent{parent} {}
 
 ValuePtr EvalEnv::eval(ValuePtr expr) {
     using OptStr = std::optional<std::string>;
@@ -52,7 +98,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         }
     }
     if (ty == ValueType::PAIR) {  // pair
-        const auto pair = dynamic_cast<PairValue*>(expr.get());
+        const auto pair = dynamic_cast<PairValue*>(expr);
         const std::vector<ValuePtr> values = pair->toVector();
 
         if (values.empty()) {
@@ -70,7 +116,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
             const auto form = SPECIAL_FORMS.at(first->asSymbolName().value());
             auto params = std::vector(values.begin() + 1, values.end());
             removeTrailingNil(params);
-            return form(params, *this);
+            return form(params, this);
         }
 
         // It's a function call
@@ -91,11 +137,11 @@ void EvalEnv::reset() {
 
 ValuePtr EvalEnv::apply(const ValuePtr& proc, const std::vector<ValuePtr>& args) {
     if (proc->getType() == ValueType::BUILTIN) {
-        const auto builtin = dynamic_cast<BuiltinProcValue*>(proc.get());
+        const auto builtin = dynamic_cast<BuiltinProcValue*>(proc);
         return builtin->apply(args);
     }
     if (proc->getType() == ValueType::LAMBDA) {
-        const auto lambda = dynamic_cast<LambdaValue*>(proc.get());
+        const auto lambda = dynamic_cast<LambdaValue*>(proc);
         return lambda->apply(args);
     }
     throw ValueError("Only functions can be applied");
@@ -103,9 +149,9 @@ ValuePtr EvalEnv::apply(const ValuePtr& proc, const std::vector<ValuePtr>& args)
 
 std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {
     std::vector<ValuePtr> result;
-    const auto* pair = dynamic_cast<PairValue*>(expr.get());
+    const auto* pair = dynamic_cast<PairValue*>(expr);
     if (pair == nullptr) {
-        if (const auto* nil = dynamic_cast<NilValue*>(expr.get()); nil != nullptr) {
+        if (const auto* nil = dynamic_cast<NilValue*>(expr); nil != nullptr) {
             return result;
         }
         throw ValueError("Expected a list");
@@ -121,7 +167,7 @@ std::optional<ValuePtr> EvalEnv::addVariable(const std::string& name, const Valu
     if (symbolTable.contains(name)) {
         auto old = symbolTable[name];
         symbolTable[name] = value;
-        return std::move(old);
+        return old;
     }
     symbolTable[name] = value;
     return std::nullopt;
@@ -135,25 +181,12 @@ bool EvalEnv::removeVariable(const std::string& name) {
     return false;
 }
 
-std::shared_ptr<EvalEnv> EvalEnv::createChild(const std::vector<std::string>& params,
-                                              const std::vector<ValuePtr>& args) {
-    EvalEnv child = EvalEnv(this->shared_from_this());
-    if (params.size() != args.size()) {
-        throw ValueError(
-            std::format("Expected {} arguments, but got {}", params.size(), args.size()));
-    }
-    for (size_t i = 0; i < params.size(); i++) {
-        child.addVariable(params[i], args[i]);
-    }
-    return std::make_shared<EvalEnv>(child);
-}
-
-ValuePtr EvalEnv::lookupBinding(const std::string& name) {
+ValuePtr EvalEnv::lookupBinding(const std::string& name) const {
     try {
         return symbolTable.at(name);
     } catch (const std::out_of_range&) {
-        if (parent.has_value()) {
-            return parent.value().lock()->lookupBinding(name);
+        if (parent) {
+            return parent->lookupBinding(name);
         }
         throw ValueError(std::format("Undefined variable: {}", name));
     }
