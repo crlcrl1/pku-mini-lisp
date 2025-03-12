@@ -8,6 +8,8 @@
 NilValue ValuePool::nil{};
 
 ValuePool::ValuePool() {
+    envs.reserve(32);
+    values.reserve(5120);
     rootEnv = new EvalEnv();
     rootEnv->addBuiltins();
     envs.push_back(rootEnv);
