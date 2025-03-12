@@ -11,6 +11,8 @@ class ValuePool {
     std::vector<EvalEnv*> envs;
     EvalEnv* rootEnv;
 
+    static NilValue nil;
+
 public:
     ValuePool();
     ~ValuePool();

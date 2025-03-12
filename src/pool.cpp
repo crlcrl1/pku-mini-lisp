@@ -3,8 +3,9 @@
 #include <ranges>
 
 #include "builtins.h"
-#include "error.h"
 #include "eval_env.h"
+
+NilValue ValuePool::nil{};
 
 ValuePool::ValuePool() {
     rootEnv = new EvalEnv();
@@ -19,6 +20,11 @@ ValuePool::~ValuePool() {
     for (const auto env : envs) {
         delete env;
     }
+}
+
+template <>
+NilValue* ValuePool::makeValue<NilValue>() {
+    return &nil;
 }
 
 EvalEnv* ValuePool::makeEnv(const EvalEnv* parent) {
@@ -58,6 +64,9 @@ size_t ValuePool::gc() {
         while (!addedValues.empty()) {
             Value* value = addedValues.back();
             addedValues.pop_back();
+            if (value == &nil) {
+                continue;
+            }
             reachableValues.insert(value);
             if (value->getType() == ValueType::LAMBDA) {
                 const auto lambda = dynamic_cast<LambdaValue*>(value);

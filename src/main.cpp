@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
             pool.gc();
             continue;
         }
-        if (loop_cnt % 4 == 0) {
+        if (loop_cnt % 16 == 0) {
             pool.gc();
         }
     }
