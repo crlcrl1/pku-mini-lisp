@@ -37,6 +37,8 @@ public:
 
 extern ValuePool pool;
 
+#ifdef _WIN32
 extern template NilValue* ValuePool::makeValue<NilValue>();
+#endif
 
 #endif  // GC_H

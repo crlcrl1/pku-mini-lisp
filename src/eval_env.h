@@ -2,7 +2,7 @@
 #define EVAL_ENV_H
 
 #include <optional>
-#include <stack>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
