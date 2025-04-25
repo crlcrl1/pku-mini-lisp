@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.24.2)
+cmake_minimum_required(VERSION 3.24)
 
 project(mini_lisp)
 
 option(USE_GTEST "Use GTest" ON)
 option(USE_SANITIZER "Use sanitizer" OFF)
+option(BUILD_CPP_EXAMPLES "Build C++ extension examples" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -16,6 +17,10 @@ set_target_properties(
         CXX_STANDARD_REQUIRED ON)
 if (MSVC)
     target_compile_options(mini_lisp PRIVATE /utf-8 /Zc:preprocessor)
+endif ()
+
+if (NOT MSVC)
+    target_link_options(mini_lisp PRIVATE -rdynamic)
 endif ()
 
 if (USE_SANITIZER)
@@ -48,4 +53,8 @@ if (USE_GTEST)
             CXX_STANDARD_REQUIRED ON)
 
     gtest_discover_tests(mini_lisp_tests)
+endif ()
+
+if (BUILD_CPP_EXAMPLES)
+    add_subdirectory(examples/cpp_extension)
 endif ()

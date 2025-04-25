@@ -33,9 +33,10 @@ int main(int argc, char* argv[]) {
         isRepl = true;
     }
 
-    int loop_cnt = 0;
+    int loopCnt = 0;
     while (true) {
-        loop_cnt++;
+        loopCnt++;
+        loadStack = {};
         try {
             auto tokens = Tokenizer::fromStream(input, isRepl);
             if (tokens.empty()) {
@@ -63,7 +64,7 @@ int main(int argc, char* argv[]) {
             pool.gc();
             continue;
         }
-        if (loop_cnt % 16 == 0) {
+        if (loopCnt % 16 == 0) {
             pool.gc();
         }
     }

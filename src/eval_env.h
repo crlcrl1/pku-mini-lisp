@@ -2,6 +2,7 @@
 #define EVAL_ENV_H
 
 #include <memory>
+#include <stack>
 #include <unordered_map>
 #include <vector>
 
@@ -48,5 +49,7 @@ public:
 
     friend class ValuePool;
 };
+
+extern std::vector<std::string> loadStack;
 
 #endif  // EVAL_ENV_H

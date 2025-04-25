@@ -5,6 +5,10 @@
 #include <fstream>
 #include <iostream>
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 #include "error.h"
 #include "eval_env.h"
 #include "parser.h"
@@ -364,14 +368,98 @@ ValuePtr builtins::zero(const std::vector<ValuePtr>& params) {
     return LISP_BOOL(std::abs(*params[0]->asNumber()) <= 1e-7);
 }
 
+std::vector<std::string> readLispPath() {
+    std::vector<std::string> paths = {"."};
+    const char* env = std::getenv("LISP_PATH");
+    if (env == nullptr) {
+        return paths;
+    }
+
+    std::string envPath(env);
+    std::string delimiter = ":";
+    size_t pos = 0;
+    while ((pos = envPath.find(delimiter)) != std::string::npos) {
+        paths.push_back(envPath.substr(0, pos));
+        envPath.erase(0, pos + delimiter.length());
+    }
+    if (!envPath.empty()) {
+        paths.push_back(envPath);
+    }
+    return paths;
+}
+
+using InitFuncType = void();
+
+void loadExtension(const std::string& fileName) {
+#ifdef _WIN32
+    raise ValueError("Native extensions are not supported on Windows yet.");
+#else
+    // convert to absolute path
+    std::filesystem::path path(fileName);
+    if (!path.is_absolute()) {
+        path = std::filesystem::current_path() / path;
+    }
+    void* handle = dlopen(path.c_str(), RTLD_LAZY);
+    if (!handle) {
+        throw ValueError(std::format("Failed to load extension: {}", dlerror()));
+    }
+    auto initFunc = reinterpret_cast<InitFuncType*>(dlsym(handle, "init_ext"));
+    if (const char* error = dlerror()) {
+        dlclose(handle);
+        throw ValueError(std::format("Failed to load extension: {}", error));
+    }
+    initFunc();
+#endif
+}
+
 ValuePtr builtins::require(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(require, 1);
     CHECK_TYPE(params[0], SYMBOL, require, string);
-    const auto filename = std::format("{}.scm", params[0]->asSymbolName().value());
-    if (!std::filesystem::exists(filename)) {
-        throw ValueError(std::format("Failed to load file: {}", filename));
+    const auto moduleName = params[0]->asSymbolName().value();
+    if (std::ranges::find(loadStack, moduleName) != loadStack.end()) {
+        throw ValueError(std::format("Circular dependency detected: {}", moduleName));
     }
-    std::ifstream file(filename);
+    loadStack.push_back(moduleName);
+    const auto filename = std::format("{}.scm", moduleName);
+#ifdef _WIN32
+    const auto extensionFilename = std::format("lib{}.dll", moduleName);
+#else
+    const auto extensionFilename = std::format("lib{}.so", moduleName);
+#endif
+
+    bool extensionFind = false;
+    std::string extensionFile;
+    bool moduleFind = false;
+    std::string moduleFile;
+
+    const auto paths = readLispPath();
+    for (const auto& path : paths) {
+        const auto modulePath = std::filesystem::path(path) / filename;
+        const auto extensionPath = std::filesystem::path(path) / extensionFilename;
+
+        if (std::filesystem::exists(modulePath)) {
+            moduleFind = true;
+            moduleFile = modulePath.string();
+            break;
+        }
+        if (std::filesystem::exists(extensionPath)) {
+            extensionFind = true;
+            extensionFile = extensionPath.string();
+            break;
+        }
+    }
+
+    if (!extensionFind && !moduleFind) {
+        throw ValueError(
+            std::format("Failed to load module {} because either {} or {} does not exist", filename,
+                        moduleName, extensionFilename));
+    }
+
+    if (extensionFind) {
+        loadExtension(extensionFile);
+        return LISP_NIL;
+    }
+    std::ifstream file(moduleFile);
     if (!file.is_open()) {
         throw ValueError(std::format("Failed to open file: {}", filename));
     }

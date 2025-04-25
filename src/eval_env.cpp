@@ -192,3 +192,5 @@ ValuePtr EvalEnv::lookupBinding(const std::string& name) const {
         throw ValueError(std::format("Undefined variable: {}", name));
     }
 }
+
+std::vector<std::string> loadStack = {};
