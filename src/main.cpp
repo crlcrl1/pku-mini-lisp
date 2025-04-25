@@ -9,10 +9,6 @@
 #include "tokenizer.h"
 #include "value.h"
 
-#ifdef USE_LLVM
-#include "llvm/jit.h"
-#endif
-
 int main(int argc, char* argv[]) {
     const auto env = pool.root();
     if (argc > 2) {
@@ -36,10 +32,6 @@ int main(int argc, char* argv[]) {
         input = &std::cin;
         isRepl = true;
     }
-
-#ifdef USE_LLVM
-    jit::initializeLLVM();
-#endif
 
     int loop_cnt = 0;
     while (true) {
@@ -77,8 +69,5 @@ int main(int argc, char* argv[]) {
         delete input;
     }
     pool.gc();
-#ifdef USE_LLVM
-    jit::finalizeLLVM();
-#endif
     return 0;
 }
