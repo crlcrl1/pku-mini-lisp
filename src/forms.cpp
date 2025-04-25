@@ -7,6 +7,10 @@
 #include "utils.h"
 #include "value.h"
 
+#ifdef USE_LLVM
+#include "jit/jit.h"
+#endif
+
 // clang-format off
 const std::unordered_map<std::string, SpecialFormType*> SPECIAL_FORMS = {
     {"define", &defineForm},
@@ -20,6 +24,7 @@ const std::unordered_map<std::string, SpecialFormType*> SPECIAL_FORMS = {
     {"begin", &beginForm},
     {"let", &letForm},
     {"quasiquote", &quasiquoteForm},
+    {"jit", &jitForm},
 };
 // clang-format on
 
@@ -120,7 +125,7 @@ ValuePtr condForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
     CHECK_EMPTY_PARAMS(cond);
     const size_t len = params.size();
     for (auto [i, v] : std::views::enumerate(params)) {
-        CHECK_TYPE(v, PAIR, cond, pair);
+        CHECK_TYPE(v, PAIR, cond, list);
         const auto pair = dynamic_cast<PairValue*>(v);
         auto pairVec = pair->toVector();
         // check if the argument is a proper list
@@ -232,4 +237,21 @@ ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
         result.push_back(arg);
     }
     return LISP_PAIR(PairValue::fromVector(result));
+}
+
+ValuePtr jitForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
+    CHECK_PARAM_NUM(jit, 1);
+    ValuePtr func = params[0];
+    CHECK_TYPE(func, SYMBOL, jit, symbol);
+    ValuePtr result = env->eval(func);
+#ifndef USE_LLVM
+    return result;
+#else
+    const LambdaValue* lambda = dynamic_cast<LambdaValue*>(result);
+    if (lambda == nullptr) {
+        throw ValueError("jit: expected a LambdaValue");
+    }
+    const auto jitFunc = pool.makeValue<jit::JITFunctionValue>(*lambda);
+    return jitFunc;
+#endif
 }

@@ -11,7 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 aux_source_directory(src SOURCES)
 if (USE_LLVM)
-    file(GLOB LLVM_SOURCES src/llvm/*.cpp)
+    file(GLOB LLVM_SOURCES src/jit/*.cpp)
     list(APPEND SOURCES ${LLVM_SOURCES})
     find_package(LLVM REQUIRED CONFIG)
     llvm_map_components_to_libnames(llvm_libs

@@ -11,11 +11,10 @@
         return pool.makeValue<valueTy>(t->getValue());                \
     }
 
-#define RETURN_QUOTE_IF_MATCH(token, tokenTy, symbolName)                          \
-    if (token->getType() == TokenType::tokenTy) {                                  \
-        return pool.makeValue<PairValue>(                                          \
-            pool.makeValue<SymbolValue>(#symbolName),                              \
-            pool.makeValue<PairValue>(this->parse(), pool.makeValue<NilValue>())); \
+#define RETURN_QUOTE_IF_MATCH(token, tokenTy, symbolName)                                     \
+    if (token->getType() == TokenType::tokenTy) {                                             \
+        return pool.makeValue<PairValue>(pool.makeValue<SymbolValue>(#symbolName),            \
+                                         pool.makeValue<PairValue>(this->parse(), LISP_NIL)); \
     }
 
 Parser::Parser(std::deque<TokenPtr> tokens) : tokens(std::move(tokens)) {}

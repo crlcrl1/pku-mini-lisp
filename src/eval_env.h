@@ -1,19 +1,33 @@
 #ifndef EVAL_ENV_H
 #define EVAL_ENV_H
 
+#ifdef USE_LLVM
+namespace llvm {
+class Module;
+class LLVMContext;
+class ExecutionEngine;
+}  // namespace llvm
+#endif
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 class Value;
 using ValuePtr = Value*;
+using ConstValuePtr = const Value*;
 
 class EvalEnv {
     std::unordered_map<std::string, ValuePtr> symbolTable;
     const EvalEnv* parent;
 
+#ifdef USE_LLVM
+    std::shared_ptr<llvm::LLVMContext> context;
+    llvm::Module* module;
+    llvm::ExecutionEngine* engine;
+#endif
+
     void addBuiltins();
-    ValuePtr lookupBinding(const std::string& name) const;
 
     EvalEnv();
     explicit EvalEnv(const EvalEnv* parent);
@@ -45,6 +59,7 @@ public:
     std::optional<ValuePtr> addVariable(const std::string& name, const ValuePtr& value);
 
     bool removeVariable(const std::string& name);
+    ValuePtr lookupBinding(const std::string& name) const;
 
     friend class ValuePool;
 };

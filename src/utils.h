@@ -2,8 +2,10 @@
 #define UTILS_H
 
 #include <deque>
+#include <vector>
 
-#include "value.h"
+class Value;
+using ValuePtr = Value*;
 
 void removeTrailingNil(std::vector<ValuePtr>& values);
 

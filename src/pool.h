@@ -1,10 +1,9 @@
 #ifndef GC_H
 #define GC_H
 
-#include "value.h"
+#include <concepts>
 
-template <typename T, typename Base>
-concept DerivedFrom = std::is_base_of_v<Base, T>;
+#include "value.h"
 
 class ValuePool {
     std::vector<Value*> values;
@@ -19,7 +18,7 @@ public:
 
     EvalEnv* makeEnv(const EvalEnv* parent);
 
-    template <DerivedFrom<Value> T, typename... Args>
+    template <std::derived_from<Value> T, typename... Args>
     T* makeValue(Args&&... args) {
         auto value = new T(std::forward<Args>(args)...);
         values.push_back(value);

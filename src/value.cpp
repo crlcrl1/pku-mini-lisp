@@ -242,6 +242,10 @@ bool LambdaValue::equals(const ValuePtr& other) const {
     return params == otherLambda->params && body == otherLambda->body;
 }
 
+const std::vector<ValuePtr>& LambdaValue::getBody() const {
+    return body;
+}
+
 std::string NilValue::toString() const {
     return "()";
 }

@@ -1,9 +1,15 @@
 #include "eval_env.h"
 
-#include <algorithm>
 #include <iterator>
 #include <set>
 #include <utility>
+
+#ifdef USE_LLVM
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/IR/Module.h>
+#endif
+
+#include <ranges>
 
 #include "builtins.h"
 #include "error.h"
@@ -72,9 +78,23 @@ void EvalEnv::addBuiltins() {
 
 EvalEnv::EvalEnv() {
     parent = nullptr;
+
+#ifdef USE_LLVM
+    context = std::make_shared<llvm::LLVMContext>();
+    module = new llvm::Module("list", *context);
+    engine = llvm::EngineBuilder(std::unique_ptr<llvm::Module>(module))
+                 .setEngineKind(llvm::EngineKind::JIT)
+                 .create();
+#endif
 }
 
-EvalEnv::EvalEnv(const EvalEnv* parent) : parent{parent} {}
+EvalEnv::EvalEnv(const EvalEnv* parent) : parent{parent} {
+#ifdef USE_LLVM
+    context = parent->context;
+    module = parent->module;
+    engine = parent->engine;
+#endif
+}
 
 ValuePtr EvalEnv::eval(ValuePtr expr) {
     using OptStr = std::optional<std::string>;
@@ -87,10 +107,11 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         throw ValueError("Cannot evaluate an empty list (nil value)");
     }
     if (ty == ValueType::SYMBOL) {  // symbol, lookup in symbol table
-        const auto symbolName =
-            expr->asSymbolName()
-                .or_else([] -> OptStr { throw ValueError("Expected symbol, found keyword"); })
-                .value_or("");
+        const auto symbolName = expr->asSymbolName()
+                                    .or_else([] static -> OptStr {
+                                        throw ValueError("Expected symbol, found keyword");
+                                    })
+                                    .value_or("");
         try {
             return this->lookupBinding(symbolName);
         } catch (const std::out_of_range&) {
@@ -158,8 +179,8 @@ std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {
     }
     auto vector = pair->toVector();
     removeTrailingNil(vector);
-    std::ranges::transform(vector, std::back_inserter(result),
-                           [this](const ValuePtr& v) { return this->eval(v); });
+    result = vector | std::views::transform([this](const ValuePtr& v) { return this->eval(v); }) |
+             std::ranges::to<std::vector>();
     return result;
 }
 

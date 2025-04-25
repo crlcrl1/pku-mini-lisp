@@ -10,7 +10,7 @@
 #include "value.h"
 
 #ifdef USE_LLVM
-#include "llvm/jit.h"
+#include "jit/jit.h"
 #endif
 
 int main(int argc, char* argv[]) {
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
 
 #ifdef USE_LLVM
-    jit::initializeLLVM();
+    jit::initializeLLVM(pool.root());
 #endif
 
     int loop_cnt = 0;
@@ -76,7 +76,6 @@ int main(int argc, char* argv[]) {
     if (!isRepl) {
         delete input;
     }
-    pool.gc();
 #ifdef USE_LLVM
     jit::finalizeLLVM();
 #endif
