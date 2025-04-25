@@ -101,6 +101,8 @@ ValuePtr odd(const std::vector<ValuePtr>& params);
 
 ValuePtr zero(const std::vector<ValuePtr>& params);
 
+ValuePtr require(const std::vector<ValuePtr>& params);
+
 }  // namespace builtins
 
 #endif  // BUILTINS_H

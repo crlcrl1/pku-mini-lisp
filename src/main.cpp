@@ -55,6 +55,9 @@ int main(int argc, char* argv[]) {
             }
         } catch (std::runtime_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;
+            if (!isRepl) {
+                return 1;
+            }
         }
         if (isRepl) {
             pool.gc();

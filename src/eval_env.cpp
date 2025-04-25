@@ -63,6 +63,7 @@ void EvalEnv::addBuiltins() {
         BUILTIN_PAIR(even, even?),
         BUILTIN_PAIR(odd, odd?),
         BUILTIN_PAIR(zero, zero?),
+        BUILTIN_PAIR(require, require),
     };
 
     for (const auto& i : builtins) {

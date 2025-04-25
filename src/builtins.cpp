@@ -1,11 +1,15 @@
 #include "builtins.h"
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 
 #include "error.h"
 #include "eval_env.h"
+#include "parser.h"
 #include "pool.h"
+#include "tokenizer.h"
 #include "utils.h"
 
 #define BUILTIN_NUMBER_CHECK(var, op)                            \
@@ -358,4 +362,29 @@ ValuePtr builtins::zero(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(zero, 1);
     CHECK_TYPE(params[0], NUMBER, zero, number);
     return LISP_BOOL(std::abs(*params[0]->asNumber()) <= 1e-7);
+}
+
+ValuePtr builtins::require(const std::vector<ValuePtr>& params) {
+    CHECK_PARAM_NUM(require, 1);
+    CHECK_TYPE(params[0], SYMBOL, require, string);
+    const auto filename = std::format("{}.scm", params[0]->asSymbolName().value());
+    if (!std::filesystem::exists(filename)) {
+        throw ValueError(std::format("Failed to load file: {}", filename));
+    }
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw ValueError(std::format("Failed to open file: {}", filename));
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string content = buffer.str();
+
+    // parse the content
+    auto tokens = Tokenizer::tokenize(content);
+    std::deque<TokenPtr> statement;
+    Parser parser(std::move(tokens));
+    while (!parser.empty()) {
+        pool.root()->eval(parser.parse());
+    }
+    return LISP_NIL;
 }
