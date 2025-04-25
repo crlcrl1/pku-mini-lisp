@@ -1,7 +1,7 @@
 #ifndef VALUE_H
 #define VALUE_H
 
-#include <iostream>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>

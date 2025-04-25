@@ -392,7 +392,7 @@ using InitFuncType = void();
 
 void loadExtension(const std::string& fileName) {
 #ifdef _WIN32
-    raise ValueError("Native extensions are not supported on Windows yet.");
+    throw ValueError("Native extensions are not supported on Windows yet.");
 #else
     // convert to absolute path
     std::filesystem::path path(fileName);

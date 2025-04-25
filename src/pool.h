@@ -37,4 +37,6 @@ public:
 
 extern ValuePool pool;
 
+extern template NilValue* ValuePool::makeValue<NilValue>();
+
 #endif  // GC_H

@@ -1,7 +1,7 @@
 #ifndef EVAL_ENV_H
 #define EVAL_ENV_H
 
-#include <memory>
+#include <optional>
 #include <stack>
 #include <unordered_map>
 #include <vector>

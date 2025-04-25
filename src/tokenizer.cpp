@@ -92,7 +92,7 @@ std::deque<TokenPtr> Tokenizer::tokenize(const std::string& input) {
 }
 
 bool Tokenizer::checkEnd(const std::deque<TokenPtr>& tokens) {
-    ssize_t parenCount = 0;
+    int parenCount = 0;
     for (const auto& token : tokens) {
         if (token->getType() == TokenType::LEFT_PAREN) {
             parenCount++;

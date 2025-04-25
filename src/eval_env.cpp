@@ -1,6 +1,7 @@
 #include "eval_env.h"
 
 #include <algorithm>
+#include <format>
 #include <iterator>
 #include <set>
 #include <utility>
