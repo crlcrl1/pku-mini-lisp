@@ -24,11 +24,6 @@ ValuePool::~ValuePool() {
     }
 }
 
-template <>
-NilValue* ValuePool::makeValue<NilValue>() {
-    return &nil;
-}
-
 EvalEnv* ValuePool::makeEnv(const EvalEnv* parent) {
     const auto env = new EvalEnv(parent);
     envs.push_back(env);

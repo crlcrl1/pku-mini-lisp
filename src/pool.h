@@ -19,11 +19,7 @@ public:
     EvalEnv* makeEnv(const EvalEnv* parent);
 
     template <std::derived_from<Value> T, typename... Args>
-    T* makeValue(Args&&... args) {
-        auto value = new T(std::forward<Args>(args)...);
-        values.push_back(value);
-        return value;
-    }
+    T* makeValue(Args&&... args);
 
     /**
      * Do garbage collection
@@ -37,8 +33,16 @@ public:
 
 extern ValuePool pool;
 
-#ifdef _WIN32
-extern template NilValue* ValuePool::makeValue<NilValue>();
-#endif
+template <std::derived_from<Value> T, typename... Args>
+T* ValuePool::makeValue(Args&&... args) {
+    auto value = new T(std::forward<Args>(args)...);
+    values.push_back(value);
+    return value;
+}
+
+template <>
+inline NilValue* ValuePool::makeValue<NilValue>() {
+    return &nil;
+}
 
 #endif  // GC_H
