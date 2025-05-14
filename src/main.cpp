@@ -68,7 +68,8 @@ int main(int argc, char* argv[]) {
         } catch (LispError& e) {
             std::cerr << std::format("{}:\n {}", e.name(), e.what()) << std::endl;
             if (auto& location = e.location()) {
-                std::cerr << std::format("  {}:{}:{}", location->file, location->row, location->col)
+                std::cerr << std::format("  {}:{} column {}", location->file, location->row + 1,
+                                         location->col)
                           << std::endl;
             }
             if (!isRepl) {

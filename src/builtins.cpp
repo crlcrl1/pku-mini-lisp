@@ -456,8 +456,9 @@ ValuePtr builtins::require(const std::vector<ValuePtr>& params) {
 
     if (!extensionFind && !moduleFind) {
         throw ValueError(
-            std::format("Failed to load module {} because either {} or {} does not exist", filename,
-                        moduleName, extensionFilename),
+            std::format(
+                "Failed to load module {} because either {} or {} does not exist in LISP_PATH",
+                filename, moduleName, extensionFilename),
             params[0]->getLocation());
     }
 
