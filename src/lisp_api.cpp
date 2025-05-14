@@ -6,5 +6,6 @@
 #include "value.h"
 
 void registerProc(const std::string& name, BuiltinFuncType& func) {
-    pool.root()->addVariable(name, pool.makeValue<BuiltinProcValue>(func));
+    ValuePool::instance()->root()->addVariable(
+        name, ValuePool::instance()->makeValue<BuiltinProcValue>(func));
 }

@@ -13,11 +13,11 @@
 
 #define LISP_API extern "C" LISP_DLL_EXPORT
 
-#define LISP_BOOL(value) pool.makeValue<BooleanValue>(value)
-#define LISP_NUM(value) pool.makeValue<NumericValue>(value)
-#define LISP_NIL pool.makeValue<NilValue>()
-#define LISP_PAIR(...) pool.makeValue<PairValue>(__VA_ARGS__)
-#define LISP_STRING(str) pool.makeValue<StringValue>(str)
+#define LISP_BOOL(value) ValuePool::instance()->makeValue<BooleanValue>(value)
+#define LISP_NUM(value) ValuePool::instance()->makeValue<NumericValue>(value)
+#define LISP_NIL ValuePool::instance()->makeValue<NilValue>()
+#define LISP_PAIR(...) ValuePool::instance()->makeValue<PairValue>(__VA_ARGS__)
+#define LISP_STRING(str) ValuePool::instance()->makeValue<StringValue>(str)
 
 #define LISP_EXT_INIT init_ext
 #define LISP_REGISTER_PROC(name, func) registerProc(#name, func)

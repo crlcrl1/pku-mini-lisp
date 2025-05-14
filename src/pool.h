@@ -11,9 +11,11 @@ class ValuePool {
     EvalEnv* rootEnv;
 
     static NilValue nil;
+    ValuePool();
+
+    static ValuePool* instance_;
 
 public:
-    ValuePool();
     ~ValuePool();
 
     EvalEnv* makeEnv(const EvalEnv* parent);
@@ -29,9 +31,10 @@ public:
     size_t gc();
 
     EvalEnv* root() const;
-};
 
-extern ValuePool pool;
+    static ValuePool* instance();
+    static void dispose();
+};
 
 template <std::derived_from<Value> T, typename... Args>
 T* ValuePool::makeValue(Args&&... args) {

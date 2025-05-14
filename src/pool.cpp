@@ -11,7 +11,6 @@ ValuePool::ValuePool() {
     envs.reserve(32);
     values.reserve(5120);
     rootEnv = new EvalEnv();
-    rootEnv->addBuiltins();
     envs.push_back(rootEnv);
 }
 
@@ -116,4 +115,19 @@ EvalEnv* ValuePool::root() const {
     return rootEnv;
 }
 
-ValuePool pool;
+ValuePool* ValuePool::instance() {
+    if (!instance_) {
+        instance_ = new ValuePool();
+        instance_->rootEnv->addBuiltins();
+    }
+    return instance_;
+}
+
+void ValuePool::dispose() {
+    if (instance_) {
+        delete instance_;
+        instance_ = nullptr;
+    }
+}
+
+ValuePool* ValuePool::instance_ = nullptr;

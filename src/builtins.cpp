@@ -16,25 +16,31 @@
 #include "tokenizer.h"
 #include "utils.h"
 
-#define BUILTIN_NUMBER_CHECK(var, op)                            \
-    if (!var->isNumber()) {                                      \
-        throw ValueError("Cannot " #op " a non-numeric value."); \
+#define BUILTIN_NUMBER_CHECK(var, op)                                                \
+    if (!var->isNumber()) {                                                          \
+        throw ValueError("Cannot " #op " a non-numeric value.", var->getLocation()); \
     }
 
-#define BUILTIN_BINARY_OP(name, op, displayName, initValue, returnTy)                           \
-    ValuePtr name(const std::vector<ValuePtr>& params) {                                        \
-        CHECK_EMPTY_PARAMS(displayName)                                                         \
-        const size_t numParams = params.size();                                                 \
-        if (numParams == 1) {                                                                   \
-            BUILTIN_NUMBER_CHECK(params[0], subtract);                                          \
-            return pool.makeValue<returnTy>(initValue op * params[0]->asNumber());              \
-        }                                                                                       \
-        if (numParams == 2) {                                                                   \
-            BUILTIN_NUMBER_CHECK(params[0], subtract);                                          \
-            BUILTIN_NUMBER_CHECK(params[1], subtract);                                          \
-            return pool.makeValue<returnTy>(*params[0]->asNumber() op * params[1]->asNumber()); \
-        }                                                                                       \
-        throw ValueError(#displayName " requires exactly one or two arguments.");               \
+#define BUILTIN_BINARY_OP(name, op, displayName, initValue, returnTy)                     \
+    ValuePtr name(const std::vector<ValuePtr>& params) {                                  \
+        CHECK_EMPTY_PARAMS(displayName)                                                   \
+        const size_t numParams = params.size();                                           \
+        if (numParams == 1) {                                                             \
+            BUILTIN_NUMBER_CHECK(params[0], subtract);                                    \
+            return ValuePool::instance()->makeValue<returnTy>(initValue op *              \
+                                                              params[0]->asNumber());     \
+        }                                                                                 \
+        if (numParams == 2) {                                                             \
+            BUILTIN_NUMBER_CHECK(params[0], subtract);                                    \
+            BUILTIN_NUMBER_CHECK(params[1], subtract);                                    \
+            return ValuePool::instance()->makeValue<returnTy>(*params[0]->asNumber() op * \
+                                                              params[1]->asNumber());     \
+        }                                                                                 \
+        std::optional<Location> loc;                                                      \
+        if (params.empty()) {                                                             \
+            loc = params[0]->getLocation();                                               \
+        }                                                                                 \
+        throw ValueError(#displayName " requires exactly one or two arguments.", loc);    \
     }
 
 #define BUILTIN_MULTI_OP(name, op, displayName, initValue) \
@@ -91,7 +97,7 @@ ValuePtr builtins::displayln(const std::vector<ValuePtr>& params) {
 
 ValuePtr builtins::newline(const std::vector<ValuePtr>& params) {
     if (!params.empty()) {
-        throw ValueError("newline requires no argument");
+        throw ValueError("newline requires no argument", std::nullopt);
     }
     std::cout << std::endl;
     return LISP_NIL;
@@ -102,12 +108,13 @@ ValuePtr builtins::error(const std::vector<ValuePtr>& params) {
         std::exit(1);
     }
     if (params.size() != 1) {
-        throw ValueError("error requires exactly one argument or none");
+        throw ValueError("error requires exactly one argument or none",
+                         Location::fromRange(params));
     }
     if (const auto value = params[0]->asNumber()) {
         std::exit(static_cast<int>(*value));
     }
-    throw ValueError("error requires a number as its argument");
+    throw ValueError("error requires a number as its argument", Location::fromRange(params));
 }
 
 ValuePtr builtins::print(const std::vector<ValuePtr>& params) {
@@ -126,7 +133,7 @@ ValuePtr builtins::exit(const std::vector<ValuePtr>& params) {
         BUILTIN_NUMBER_CHECK(params[0], exit);
         std::exit(static_cast<int>(*params[0]->asNumber()));
     }
-    throw ValueError("exit requires zero or one argument");
+    throw ValueError("exit requires zero or one argument", Location::fromRange(params));
 }
 
 ValuePtr builtins::length(const std::vector<ValuePtr>& params) {
@@ -182,7 +189,7 @@ ValuePtr builtins::isList(const std::vector<ValuePtr>& params) {
     }
     const auto arg = dynamic_cast<PairValue*>(params[0]);
     if (arg == nullptr) {
-        throw ValueError("list? requires a pair as its argument");
+        throw ValueError("list? requires a pair as its argument", params[0]->getLocation());
     }
     const auto vec = arg->toVector();
     return LISP_BOOL(vec.back()->getType() == ValueType::NIL);
@@ -257,7 +264,7 @@ ValuePtr builtins::filter(const std::vector<ValuePtr>& params) {
     for (const auto& i : vec) {
         auto res = EvalEnv::apply(func, {i});
         if (res->getType() != ValueType::BOOLEAN) {
-            throw ValueError("filter function must return a boolean value");
+            throw ValueError("filter function must return a boolean value", std::nullopt);
         }
         if (dynamic_cast<BooleanValue*>(res)->getValue()) {
             result.push_back(i);
@@ -286,26 +293,23 @@ ValuePtr builtins::abs(const std::vector<ValuePtr>& params) {
 
 ValuePtr builtins::expt(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(expt, 2);
-    if (!params[0]->isNumber() || !params[1]->isNumber()) {
-        throw ValueError("expt requires two numbers as its arguments");
-    }
+    CHECK_TYPE(params[0], NUMBER, expt, number);
+    CHECK_TYPE(params[1], NUMBER, expt, number);
     return LISP_NUM(std::pow(*params[0]->asNumber(), *params[1]->asNumber()));
 }
 
 ValuePtr builtins::quotient(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(quotient, 2);
-    if (!params[0]->isNumber() || !params[1]->isNumber()) {
-        throw ValueError("quotient requires two numbers as its arguments");
-    }
+    CHECK_TYPE(params[0], NUMBER, quotient, number);
+    CHECK_TYPE(params[1], NUMBER, quotient, number);
     const double res = *params[0]->asNumber() / *params[1]->asNumber();
     return LISP_NUM(res >= 0 ? std::floor(res) : std::ceil(res));
 }
 
 ValuePtr builtins::modulo(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(modulo, 2);
-    if (!params[0]->isNumber() || !params[1]->isNumber()) {
-        throw ValueError("modulo requires two numbers as its arguments");
-    }
+    CHECK_TYPE(params[0], NUMBER, modulo, number);
+    CHECK_TYPE(params[1], NUMBER, modulo, number);
     const double a = *params[0]->asNumber();
     const double b = *params[1]->asNumber();
     if (a * b > 0) {
@@ -316,9 +320,8 @@ ValuePtr builtins::modulo(const std::vector<ValuePtr>& params) {
 
 ValuePtr builtins::remainder(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(remainder, 2);
-    if (!params[0]->isNumber() || !params[1]->isNumber()) {
-        throw ValueError("remainder requires two numbers as its arguments");
-    }
+    CHECK_TYPE(params[0], NUMBER, remainder, number);
+    CHECK_TYPE(params[1], NUMBER, remainder, number);
     const double a = *params[0]->asNumber();
     const double b = *params[1]->asNumber();
     return LISP_NUM(a - std::trunc(a / b) * b);
@@ -392,7 +395,7 @@ using InitFuncType = void();
 
 void loadExtension(const std::string& fileName) {
 #ifdef _WIN32
-    throw ValueError("Native extensions are not supported on Windows yet.");
+    throw ValueError("Native extensions are not supported on Windows yet.", std::nullopt);
 #else
     // convert to absolute path
     std::filesystem::path path(fileName);
@@ -401,12 +404,12 @@ void loadExtension(const std::string& fileName) {
     }
     void* handle = dlopen(path.c_str(), RTLD_LAZY);
     if (!handle) {
-        throw ValueError(std::format("Failed to load extension: {}", dlerror()));
+        throw ValueError(std::format("Failed to load extension: {}", dlerror()), std::nullopt);
     }
     auto initFunc = reinterpret_cast<InitFuncType*>(dlsym(handle, "init_ext"));
     if (const char* error = dlerror()) {
         dlclose(handle);
-        throw ValueError(std::format("Failed to load extension: {}", error));
+        throw ValueError(std::format("Failed to load extension: {}", error), std::nullopt);
     }
     initFunc();
 #endif
@@ -416,10 +419,11 @@ ValuePtr builtins::require(const std::vector<ValuePtr>& params) {
     CHECK_PARAM_NUM(require, 1);
     CHECK_TYPE(params[0], SYMBOL, require, string);
     const auto moduleName = params[0]->asSymbolName().value();
-    if (std::ranges::find(loadStack, moduleName) != loadStack.end()) {
-        throw ValueError(std::format("Circular dependency detected: {}", moduleName));
+    if (std::ranges::find(EvalEnv::loadStack, moduleName) != EvalEnv::loadStack.end()) {
+        throw ValueError(std::format("Circular dependency detected: {}", moduleName),
+                         params[0]->getLocation());
     }
-    loadStack.push_back(moduleName);
+    EvalEnv::loadStack.push_back(moduleName);
     const auto filename = std::format("{}.scm", moduleName);
 #ifdef _WIN32
     const auto extensionFilename = std::format("lib{}.dll", moduleName);
@@ -427,6 +431,7 @@ ValuePtr builtins::require(const std::vector<ValuePtr>& params) {
     const auto extensionFilename = std::format("lib{}.so", moduleName);
 #endif
 
+    // find dynamic library or script file in LISP_PATH
     bool extensionFind = false;
     std::string extensionFile;
     bool moduleFind = false;
@@ -452,27 +457,33 @@ ValuePtr builtins::require(const std::vector<ValuePtr>& params) {
     if (!extensionFind && !moduleFind) {
         throw ValueError(
             std::format("Failed to load module {} because either {} or {} does not exist", filename,
-                        moduleName, extensionFilename));
+                        moduleName, extensionFilename),
+            params[0]->getLocation());
     }
 
     if (extensionFind) {
-        loadExtension(extensionFile);
+        try {
+            loadExtension(extensionFile);
+        } catch (const ValueError& e) {
+            throw ValueError(e.what(), params[0]->getLocation());
+        }
         return LISP_NIL;
     }
     std::ifstream file(moduleFile);
     if (!file.is_open()) {
-        throw ValueError(std::format("Failed to open file: {}", filename));
+        throw ValueError(std::format("Failed to open file: {}", filename),
+                         params[0]->getLocation());
     }
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string content = buffer.str();
 
     // parse the content
-    auto tokens = Tokenizer::tokenize(content);
+    auto tokens = Tokenizer::tokenize(content, moduleFile, 0);
     std::deque<TokenPtr> statement;
     Parser parser(std::move(tokens));
     while (!parser.empty()) {
-        pool.root()->eval(parser.parse());
+        ValuePool::instance()->root()->eval(parser.parse());
     }
     return LISP_NIL;
 }

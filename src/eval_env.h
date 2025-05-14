@@ -47,9 +47,9 @@ public:
 
     bool removeVariable(const std::string& name);
 
+    static std::vector<std::string> loadStack;
+
     friend class ValuePool;
 };
-
-extern std::vector<std::string> loadStack;
 
 #endif  // EVAL_ENV_H

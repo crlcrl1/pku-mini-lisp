@@ -1,21 +1,24 @@
 #include "parser.h"
 
+#include <format>
+
 #include "error.h"
 #include "pool.h"
 #include "token.h"
 #include "utils.h"
 #include "value.h"
 
-#define RETURN_VALUE_IF_MATCH(token, tokenTy, valueTy)                \
-    if (auto t = dynamic_cast<tokenTy*>(token.get()); t != nullptr) { \
-        return pool.makeValue<valueTy>(t->getValue());                \
+#define RETURN_VALUE_IF_MATCH(token, tokenTy, valueTy)                                         \
+    if (auto t = dynamic_cast<tokenTy*>(token.get()); t != nullptr) {                          \
+        return ValuePool::instance()->makeValue<valueTy>(t->getValue(), token->getLocation()); \
     }
 
-#define RETURN_QUOTE_IF_MATCH(token, tokenTy, symbolName)                          \
-    if (token->getType() == TokenType::tokenTy) {                                  \
-        return pool.makeValue<PairValue>(                                          \
-            pool.makeValue<SymbolValue>(#symbolName),                              \
-            pool.makeValue<PairValue>(this->parse(), pool.makeValue<NilValue>())); \
+#define RETURN_QUOTE_IF_MATCH(token, tokenTy, symbolName)                                    \
+    if (token->getType() == TokenType::tokenTy) {                                            \
+        auto instance = ValuePool::instance();                                               \
+        return instance->makeValue<PairValue>(                                               \
+            instance->makeValue<SymbolValue>(#symbolName, token->getLocation()),             \
+            instance->makeValue<PairValue>(this->parse(), instance->makeValue<NilValue>())); \
     }
 
 Parser::Parser(std::deque<TokenPtr> tokens) : tokens(std::move(tokens)) {}
@@ -34,10 +37,17 @@ ValuePtr Parser::parse() {
     RETURN_QUOTE_IF_MATCH(token, UNQUOTE, unquote);
 
     if (token->getType() == TokenType::LEFT_PAREN) {
-        return this->parseTails();
+        try {
+            return this->parseTails();
+        } catch (const SyntaxError& e) {
+            if (e.location()) {
+                throw;
+            }
+            throw SyntaxError(e.what(), token->getLocation());
+        }
     }
 
-    throw SyntaxError("Unexpected token: " + token->toString());
+    throw SyntaxError(std::format("Unexpected token: {}", token->toString()), token->getLocation());
 }
 
 bool Parser::empty() const {
@@ -46,7 +56,7 @@ bool Parser::empty() const {
 
 ValuePtr Parser::parseTails() {
     if (tokens.empty()) {
-        throw SyntaxError("Expected ')'");
+        throw SyntaxError("Expected ')'", std::nullopt);
     }
 
     auto frontTy = tokens.front()->getType();
@@ -60,7 +70,7 @@ ValuePtr Parser::parseTails() {
     auto car = this->parse();
 
     if (tokens.empty()) {
-        throw SyntaxError("Expected ')'");
+        throw SyntaxError("Expected ')'", std::nullopt);
     }
 
     frontTy = tokens.front()->getType();
@@ -74,7 +84,7 @@ ValuePtr Parser::parseTails() {
         const TokenPtr endToken = std::move(tokens.front());
         tokens.pop_front();
         if (endToken->getType() != TokenType::RIGHT_PAREN) {
-            throw SyntaxError("Expected ')' at the end of the list");
+            throw SyntaxError("Expected ')' at the end of the list", std::nullopt);
         }
         return LISP_PAIR(car, cdr);
     }

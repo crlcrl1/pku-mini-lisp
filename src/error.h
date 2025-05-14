@@ -3,29 +3,38 @@
 
 #include <stdexcept>
 
-class SyntaxError : public std::runtime_error {
+#include "location.h"
+
+class LispError : public std::runtime_error {
+    std::optional<Location> loc;
+    std::string name_;
+
 public:
-    using runtime_error::runtime_error;
+    LispError(const std::string& msg, const std::optional<Location>& loc, const std::string& name)
+        : std::runtime_error(msg), loc(loc), name_(name) {}
+
+    const std::optional<Location>& location() const {
+        return loc;
+    }
+
+    const std::string& name() const {
+        return name_;
+    }
 };
 
-class ValueError : public std::runtime_error {
-public:
-    using runtime_error::runtime_error;
-};
+#define LISP_ERROR(error_name)                                                 \
+    class error_name : public LispError {                                      \
+    public:                                                                    \
+        error_name(const std::string& msg, const std::optional<Location>& loc) \
+            : LispError(msg, loc, #error_name) {}                              \
+    };
 
-class UnimplementedError : public std::runtime_error {
-public:
-    using runtime_error::runtime_error;
-};
+LISP_ERROR(SyntaxError)
+LISP_ERROR(ValueError)
+LISP_ERROR(UnimplementedError)
+LISP_ERROR(InternalError)
+LISP_ERROR(TypeError)
 
-class InternalError : public std::runtime_error {
-public:
-    using runtime_error::runtime_error;
-};
-
-class TypeError : public std::runtime_error {
-public:
-    using runtime_error::runtime_error;
-};
+#undef LISP_ERROR
 
 #endif

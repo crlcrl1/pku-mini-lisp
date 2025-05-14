@@ -2,15 +2,15 @@
 
 LISP_API ValuePtr fib(const std::vector<ValuePtr>& params) {
     if (params.size() != 1) {
-        throw ValueError("fib: expected one argument");
+        throw ValueError("fib: expected one argument", Location::fromRange(params));
     }
     const auto n = params[0];
     if (n->getType() != ValueType::NUMBER) {
-        throw ValueError("fib: expected a number as the argument");
+        throw ValueError("fib: expected a number as the argument", n->getLocation());
     }
     const int num = static_cast<int>(*n->asNumber());
     if (num < 0) {
-        throw ValueError("fib: expected a non-negative number as the argument");
+        throw ValueError("fib: expected a non-negative number as the argument", n->getLocation());
     }
     if (num == 0) {
         return LISP_NUM(0);

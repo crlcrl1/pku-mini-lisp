@@ -9,9 +9,9 @@
 #include "value.h"
 
 std::string eval(const std::string& input) {
-    const auto env = pool.root();
-    pool.gc();
-    auto tokens = Tokenizer::tokenize(input);
+    const auto env = ValuePool::instance()->root();
+    ValuePool::instance()->gc();
+    auto tokens = Tokenizer::tokenize(input, "<test>", 0);
     Parser parser(std::move(tokens));
     const auto value = parser.parse();
     const auto result = env->eval(value);
@@ -19,55 +19,56 @@ std::string eval(const std::string& input) {
 }
 
 TEST(lisp_test_eval, Lv2) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv2, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv3) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv3, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv4) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv4, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv5) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
+    ValuePool::instance()->gc();
     RUN_TEST(rjsj_mini_lisp_test_Lv5, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv5Extra) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv5Extra, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv6) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv6, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv7) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv7, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Lv7Lib) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Lv7Lib, eval);
+    ValuePool::dispose();
 }
 
 TEST(list_test_eval, Sicp) {
-    pool.root()->reset();
-    pool.gc();
+    ValuePool::instance()->root()->reset();
     RUN_TEST(rjsj_mini_lisp_test_Sicp, eval);
+    ValuePool::dispose();
 }

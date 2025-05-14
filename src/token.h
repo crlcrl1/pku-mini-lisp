@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "location.h"
+
 enum class TokenType {
     LEFT_PAREN,
     RIGHT_PAREN,
@@ -21,11 +23,12 @@ class Token;
 using TokenPtr = std::unique_ptr<Token>;
 
 class Token {
-private:
     TokenType type;
+    Location location;
 
 protected:
-    explicit Token(TokenType type) : type{type} {}
+    explicit Token(TokenType type, const std::string& file, int row, int col, int len)
+        : type{type}, location{.file = file, .row = row, .col = col, .len = len} {}
 
 public:
     virtual ~Token() = default;
@@ -34,25 +37,33 @@ public:
      * @brief Try to generate a token from a special character, i.e. '(', ')', '\`',
      * '`', ','.
      * @param c The character to generate token from.
+     * @param file The file name of the token.
+     * @param row The row number of the token in the file.
+     * @param col The column number of the token in the file.
      * @return A token if the character is a special character, nullptr otherwise.
      */
-    static TokenPtr fromChar(char c);
-    static TokenPtr dot();
+    static TokenPtr fromChar(char c, const std::string& file, int row, int col);
+    static TokenPtr dot(const std::string& file, int row, int col);
 
     TokenType getType() const {
         return type;
     }
     virtual std::string toString() const;
+
+    const Location& getLocation() const {
+        return location;
+    }
 };
 
 class BooleanLiteralToken : public Token {
-private:
     bool value;
 
 public:
-    explicit BooleanLiteralToken(bool value) : Token(TokenType::BOOLEAN_LITERAL), value{value} {}
+    explicit BooleanLiteralToken(bool value, const std::string& file, int row, int col)
+        : Token(TokenType::BOOLEAN_LITERAL, file, row, col, 2), value{value} {}
 
-    static std::unique_ptr<BooleanLiteralToken> fromChar(char c);
+    static std::unique_ptr<BooleanLiteralToken> fromChar(char c, const std::string& file, int row,
+                                                         int col);
 
     bool getValue() const {
         return value;
@@ -61,11 +72,11 @@ public:
 };
 
 class NumericLiteralToken : public Token {
-private:
     double value;
 
 public:
-    explicit NumericLiteralToken(double value) : Token(TokenType::NUMERIC_LITERAL), value{value} {}
+    explicit NumericLiteralToken(double value, const std::string& file, int row, int col, int len)
+        : Token(TokenType::NUMERIC_LITERAL, file, row, col, len), value{value} {}
 
     double getValue() const {
         return value;
@@ -74,12 +85,12 @@ public:
 };
 
 class StringLiteralToken : public Token {
-private:
     std::string value;
 
 public:
-    explicit StringLiteralToken(const std::string& value)
-        : Token(TokenType::STRING_LITERAL), value{value} {}
+    explicit StringLiteralToken(const std::string& value, const std::string& file, int row, int col,
+                                int len)
+        : Token(TokenType::STRING_LITERAL, file, row, col, len), value{value} {}
 
     const std::string& getValue() const {
         return value;
@@ -88,11 +99,12 @@ public:
 };
 
 class IdentifierToken : public Token {
-private:
     std::string name;
 
 public:
-    explicit IdentifierToken(const std::string& name) : Token(TokenType::IDENTIFIER), name{name} {}
+    explicit IdentifierToken(const std::string& name, const std::string& file, int row, int col,
+                             int len)
+        : Token(TokenType::IDENTIFIER, file, row, col, len), name{name} {}
 
     const std::string& getName() const {
         return name;

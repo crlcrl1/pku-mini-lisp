@@ -14,7 +14,7 @@
 #include "value.h"
 
 #define BUILTIN_PAIR(procName, builtinName) \
-    {#builtinName, pool.makeValue<BuiltinProcValue>(&builtins::procName)}
+    {#builtinName, ValuePool::instance()->makeValue<BuiltinProcValue>(&builtins::procName)}
 
 void EvalEnv::addBuiltins() {
     const std::unordered_map<std::string, ValuePtr> builtins = {
@@ -86,17 +86,23 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         return expr;
     }
     if (ty == ValueType::NIL) {  // nil
-        throw ValueError("Cannot evaluate an empty list (nil value)");
+        throw ValueError("Cannot evaluate an empty list (nil value)", expr->getLocation());
     }
     if (ty == ValueType::SYMBOL) {  // symbol, lookup in symbol table
         const auto symbolName =
             expr->asSymbolName()
-                .or_else([] -> OptStr { throw ValueError("Expected symbol, found keyword"); })
+                .or_else([&] -> OptStr {
+                    throw ValueError("Expected symbol, found keyword", expr->getLocation());
+                })
                 .value_or("");
         try {
             return this->lookupBinding(symbolName);
-        } catch (const std::out_of_range&) {
-            throw ValueError(std::format("Undefined variable: {}", symbolName));
+        } catch (const ValueError& e) {
+            if (e.location()) {
+                throw;
+            }
+            throw ValueError(std::format("Undefined variable: {}", symbolName),
+                             expr->getLocation());
         }
     }
     if (ty == ValueType::PAIR) {  // pair
@@ -104,7 +110,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         const std::vector<ValuePtr> values = pair->toVector();
 
         if (values.empty()) {
-            throw ValueError("Cannot evaluate an empty list");
+            throw ValueError("Cannot evaluate an empty list", expr->getLocation());
         }
 
         auto first = values[0];
@@ -129,7 +135,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
     if (ty == ValueType::BUILTIN || ty == ValueType::LAMBDA) {
         return expr;
     }
-    throw InternalError("This is a bug, not your fault, please report it");
+    throw InternalError("This is a bug, not your fault, please report it", std::nullopt);
 }
 
 void EvalEnv::reset() {
@@ -146,7 +152,7 @@ ValuePtr EvalEnv::apply(const ValuePtr& proc, const std::vector<ValuePtr>& args)
         const auto lambda = dynamic_cast<LambdaValue*>(proc);
         return lambda->apply(args);
     }
-    throw ValueError("Only functions can be applied");
+    throw ValueError("Only functions can be applied", proc->getLocation());
 }
 
 std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {
@@ -156,7 +162,7 @@ std::vector<ValuePtr> EvalEnv::evalList(const ValuePtr& expr) {
         if (const auto* nil = dynamic_cast<NilValue*>(expr); nil != nullptr) {
             return result;
         }
-        throw ValueError("Expected a list");
+        throw ValueError("Expected a list", expr->getLocation());
     }
     auto vector = pair->toVector();
     removeTrailingNil(vector);
@@ -190,8 +196,8 @@ ValuePtr EvalEnv::lookupBinding(const std::string& name) const {
         if (parent) {
             return parent->lookupBinding(name);
         }
-        throw ValueError(std::format("Undefined variable: {}", name));
+        throw ValueError(std::format("Undefined variable: {}", name), std::nullopt);
     }
 }
 
-std::vector<std::string> loadStack = {};
+std::vector<std::string> EvalEnv::loadStack = {};

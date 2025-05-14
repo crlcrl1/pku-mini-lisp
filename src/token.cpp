@@ -5,7 +5,7 @@
 
 using namespace std::literals;
 
-TokenPtr Token::fromChar(char c) {
+TokenPtr Token::fromChar(char c, const std::string& file, int row, int col) {
     TokenType type;
     switch (c) {
         case '(':
@@ -27,11 +27,11 @@ TokenPtr Token::fromChar(char c) {
         default:
             return nullptr;
     }
-    return TokenPtr(new Token(type));
+    return TokenPtr(new Token(type, file, row, col, 1));
 }
 
-TokenPtr Token::dot() {
-    return TokenPtr(new Token(TokenType::DOT));
+TokenPtr Token::dot(const std::string& file, int row, int col) {
+    return TokenPtr(new Token(TokenType::DOT, file, row, col, 1));
 }
 
 std::string Token::toString() const {
@@ -53,14 +53,15 @@ std::string Token::toString() const {
     }
 }
 
-std::unique_ptr<BooleanLiteralToken> BooleanLiteralToken::fromChar(char c) {
+std::unique_ptr<BooleanLiteralToken> BooleanLiteralToken::fromChar(char c, const std::string& file,
+                                                                   int row, int col) {
     if (c == 't') {
-        return std::make_unique<BooleanLiteralToken>(true);
-    } else if (c == 'f') {
-        return std::make_unique<BooleanLiteralToken>(false);
-    } else {
-        return nullptr;
+        return std::make_unique<BooleanLiteralToken>(true, file, row, col);
     }
+    if (c == 'f') {
+        return std::make_unique<BooleanLiteralToken>(false, file, row, col);
+    }
+    return nullptr;
 }
 
 std::string BooleanLiteralToken::toString() const {

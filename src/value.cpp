@@ -47,6 +47,10 @@ bool Value::isAtom() const {
     return ATOMIC_VALUES.contains(ty);
 }
 
+const std::optional<Location>& Value::getLocation() const {
+    return location;
+}
+
 std::vector<ValuePtr> Value::children(ValuePtr value) {
     if (value->getType() != ValueType::PAIR) {
         return {};
@@ -210,8 +214,12 @@ bool BuiltinProcValue::equals(const ValuePtr& other) const {
     return func == dynamic_cast<BuiltinProcValue*>(other)->func;
 }
 
-LambdaValue::LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body, EvalEnv* env)
-    : Value(ValueType::LAMBDA), params(std::move(params)), body(std::move(body)), env(env) {}
+LambdaValue::LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body, EvalEnv* env,
+                         const std::optional<Location>& location)
+    : Value(ValueType::LAMBDA, location),
+      params(std::move(params)),
+      body(std::move(body)),
+      env(env) {}
 
 std::string LambdaValue::toString() const {
     return "#<proc>";
@@ -220,10 +228,11 @@ std::string LambdaValue::toString() const {
 ValuePtr LambdaValue::apply(const std::vector<ValuePtr>& args) const {
     if (args.size() != params.size()) {
         throw ValueError(
-            std::format("Expected {} arguments, but got {}", params.size(), args.size()));
+            std::format("Expected {} arguments, but got {}", params.size(), args.size()),
+            Location::fromRange(args));
     }
     // Create a new environment
-    const auto newEnv = pool.makeEnv(env);
+    const auto newEnv = ValuePool::instance()->makeEnv(env);
     for (size_t i = 0; i < params.size(); i++) {
         newEnv->addVariable(params[i], args[i]);
     }

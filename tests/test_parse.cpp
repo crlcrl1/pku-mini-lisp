@@ -7,7 +7,7 @@
 #include "value.h"
 
 std::string parse(const std::string& input) {
-    auto tokens = Tokenizer::tokenize(input);
+    auto tokens = Tokenizer::tokenize(input, "<test>", 0);
     Parser parser(std::move(tokens));
     const auto value = parser.parse();
     return value->toString();

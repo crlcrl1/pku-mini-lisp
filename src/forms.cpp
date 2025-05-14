@@ -3,6 +3,7 @@
 #include <ranges>
 
 #include "error.h"
+#include "eval_env.h"
 #include "pool.h"
 #include "utils.h"
 #include "value.h"
@@ -24,19 +25,24 @@ const std::unordered_map<std::string, SpecialFormType*> SPECIAL_FORMS = {
 // clang-format on
 
 ValuePtr defineForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
+    if (params.size() < 2) {
+        throw ValueError("define: expected at least two arguments", Location::fromRange(params));
+    }
     if (const auto name = params[0]->asSymbolName(); name.has_value()) {
         env->addVariable(*name, env->eval(params[1]));
     } else if (const auto pair = dynamic_cast<PairValue*>(params[0]); pair != nullptr) {
         const auto procName = pair->getCar()->asSymbolName();
         if (!procName.has_value()) {
-            throw ValueError("define: expected a symbol as the first argument");
+            throw ValueError("define: expected a symbol as the first argument",
+                             pair->getCar()->getLocation());
         }
         std::vector procParams = {pair->getCdr()};
         procParams.insert(procParams.end(), params.begin() + 1, params.end());
         const auto lambda = lambdaForm(procParams, env);
         env->addVariable(*procName, lambda);
     } else {
-        throw ValueError("define: expected a symbol or a pair as the first argument");
+        throw ValueError("define: expected a symbol or a pair as the first argument",
+                         params[0]->getLocation());
     }
     return LISP_NIL;
 }
@@ -91,10 +97,10 @@ ValuePtr lambdaForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
     const auto lambdaParams = dynamic_cast<PairValue*>(params[0]);
     const auto body = std::vector(params.begin() + 1, params.end());
     if (lambdaParams == nullptr && params[0]->getType() != ValueType::NIL) {
-        throw ValueError("lambda: expected a pair of parameters");
+        throw ValueError("lambda: expected a pair of parameters", params[0]->getLocation());
     }
     if (lambdaParams == nullptr) {  // no parameters
-        return pool.makeValue<LambdaValue>(std::vector<std::string>{}, body, env);
+        return ValuePool::instance()->makeValue<LambdaValue>(std::vector<std::string>{}, body, env);
     }
     auto paramsList = std::vector<std::string>{};
     auto paramsVec = lambdaParams->toVector();
@@ -104,11 +110,12 @@ ValuePtr lambdaForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
         if (const auto name = param->asSymbolName(); name.has_value()) {
             paramsList.push_back(*name);
         } else {
-            throw ValueError("lambda: expected a list of symbols as parameters");
+            throw ValueError("lambda: expected a list of symbols as parameters",
+                             param->getLocation());
         }
     }
 
-    return pool.makeValue<LambdaValue>(paramsList, body, env);
+    return ValuePool::instance()->makeValue<LambdaValue>(paramsList, body, env);
 }
 
 ValuePtr evalForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
@@ -154,7 +161,7 @@ ValuePtr condForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
             return result;
         }
     }
-    throw InternalError("cond: unexpected error");
+    throw InternalError("cond: unexpected error", std::nullopt);
 }
 
 ValuePtr beginForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
@@ -173,7 +180,7 @@ ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
     const auto varPair = dynamic_cast<PairValue*>(params[0]);
     auto varVec = varPair->toVector();
     if (varVec.back()->getType() != ValueType::NIL) {
-        throw ValueError("let expected a list as the first argument");
+        throw ValueError("let expected a list as the first argument", varPair->getLocation());
     }
     varVec.pop_back();
     std::unordered_map<std::string, std::optional<ValuePtr>> oldVarMap;
@@ -183,17 +190,18 @@ ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
         const auto pair = dynamic_cast<PairValue*>(var);
         auto pairVec = pair->toVector();
         if (pairVec.size() != 3 || pairVec[2]->getType() != ValueType::NIL) {
-            throw ValueError("let: expected a list as the argument");
+            throw ValueError("let: expected a list as the argument", pair->getLocation());
         }
         auto name = pairVec[0]->asSymbolName();
         if (!name.has_value()) {
-            throw ValueError("let: expected a symbol as the first element of the list");
+            throw ValueError("let: expected a symbol as the first element of the list",
+                             pairVec[0]->getLocation());
         }
         auto value = env->eval(pairVec[1]);
         newVarMap[*name] = value;
     }
     // create a new environment
-    auto newEnv = pool.makeEnv(env);
+    auto newEnv = ValuePool::instance()->makeEnv(env);
     for (const auto& [name, value] : newVarMap) {
         newEnv->addVariable(name, value);
     }

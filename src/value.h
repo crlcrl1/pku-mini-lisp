@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "location.h"
+
 class Value;
 
 using ValuePtr = Value*;
@@ -27,8 +29,11 @@ enum class ValueType {
 class Value {
     ValueType ty;
 
+    std::optional<Location> location;
+
 public:
-    explicit Value(const ValueType ty) : ty{ty} {}
+    explicit Value(const ValueType ty, const std::optional<Location>& location)
+        : ty{ty}, location(location) {}
     virtual ~Value() = default;
 
     virtual std::string toString() const = 0;
@@ -38,6 +43,7 @@ public:
     std::optional<double> asNumber() const;
     bool isAtom() const;
     virtual bool equals(const ValuePtr& other) const = 0;
+    const std::optional<Location>& getLocation() const;
 
     static std::vector<ValuePtr> children(ValuePtr value);
 };
@@ -48,7 +54,8 @@ class BooleanValue : public Value {
     bool value;
 
 public:
-    explicit BooleanValue(const bool value) : Value(ValueType::BOOLEAN), value{value} {}
+    explicit BooleanValue(const bool value, const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::BOOLEAN, location), value{value} {}
 
     std::string toString() const override;
     bool getValue() const;
@@ -59,7 +66,9 @@ class NumericValue : public Value {
     double value;
 
 public:
-    explicit NumericValue(const double value) : Value(ValueType::NUMBER), value{value} {}
+    explicit NumericValue(const double value,
+                          const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::NUMBER, location), value{value} {}
 
     std::string toString() const override;
     double getValue() const;
@@ -70,7 +79,9 @@ class StringValue : public Value {
     std::string value;
 
 public:
-    explicit StringValue(const std::string& value) : Value(ValueType::STRING), value{value} {}
+    explicit StringValue(const std::string& value,
+                         const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::STRING, location), value{value} {}
 
     std::string toString() const override;
     std::string getValue() const;
@@ -79,7 +90,8 @@ public:
 
 class NilValue : public Value {
 public:
-    NilValue() : Value(ValueType::NIL) {}
+    explicit NilValue(const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::NIL, location) {}
 
     std::string toString() const override;
     bool equals(const ValuePtr& other) const override;
@@ -89,7 +101,9 @@ class SymbolValue : public Value {
     std::string value;
 
 public:
-    explicit SymbolValue(const std::string& value) : Value(ValueType::SYMBOL), value{value} {}
+    explicit SymbolValue(const std::string& value,
+                         const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::SYMBOL, location), value{value} {}
 
     std::string toString() const override;
     std::string getValue() const;
@@ -101,7 +115,8 @@ class PairValue : public Value {
     ValuePtr cdr;
 
 public:
-    PairValue(ValuePtr car, ValuePtr cdr) : Value(ValueType::PAIR), car{car}, cdr{cdr} {}
+    PairValue(ValuePtr car, ValuePtr cdr, const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::PAIR, location), car{car}, cdr{cdr} {}
 
     std::string toString() const override;
 
@@ -122,7 +137,9 @@ class BuiltinProcValue : public Value {
     BuiltinFuncType* func;
 
 public:
-    explicit BuiltinProcValue(BuiltinFuncType* func) : Value(ValueType::BUILTIN), func(func) {}
+    explicit BuiltinProcValue(BuiltinFuncType* func,
+                              const std::optional<Location>& location = std::nullopt)
+        : Value(ValueType::BUILTIN, location), func(func) {}
 
     std::string toString() const override;
     ValuePtr apply(const std::vector<ValuePtr>& args) const;
@@ -136,7 +153,8 @@ protected:
     mutable EvalEnv* env;
 
 public:
-    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body, EvalEnv* env);
+    LambdaValue(std::vector<std::string> params, std::vector<ValuePtr> body, EvalEnv* env,
+                const std::optional<Location>& location = std::nullopt);
 
     std::string toString() const override;
     virtual ValuePtr apply(const std::vector<ValuePtr>& args) const;
