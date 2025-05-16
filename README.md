@@ -17,6 +17,7 @@ A simple Lisp interpreter implemented in C++.
 - [x] Garbage collection with mark-and-sweep algorithm
 - [ ] JIT compilation with LLVM
 - [x] Load modules written in C++ or Lisp with `require` function (Windows is not supported yet)
+- [x] REPL with syntax highlighting
 
 ## How to build the project
 
@@ -29,3 +30,9 @@ cmake .. && cmake --build .
 ```
 
 This project uses Google Test as the testing framework and it is enabled by default. You have trouble configuring Google Test or building tests, you can disable the tests by passing `-DUSE_GTEST=OFF` to CMake. If you encounter other problems, check your compiler version first. This project requires C++23 support. If your compiler do support C++23 and you still have trouble building the project, feel free to open an issue.
+
+## License
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](./LICENSE) file for details.
+
+### Third-party Licenses
+This project uses [replxx](https://github.com/AmokHuginnsson/replxx) for readline support. The license is included in the `third_party/replxx` directory.

@@ -32,4 +32,6 @@ ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv* env);
 
 ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv* env);
 
+ValuePtr requireForm(const std::vector<ValuePtr>& params, EvalEnv* env);
+
 #endif  // FORMS_H

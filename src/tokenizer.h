@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 
+#include "repl.h"
 #include "token.h"
 
 class Tokenizer {
@@ -22,7 +23,7 @@ public:
     static std::deque<TokenPtr> tokenize(const std::string& input,
                                          const std::optional<std::string>& file, int row);
     static bool checkEnd(const std::deque<TokenPtr>& tokens);
-    static std::deque<TokenPtr> fromStream(std::istream* stream, bool isRepl,
+    static std::deque<TokenPtr> fromStream(std::istream* stream, std::optional<Repl>& repl,
                                            const std::optional<std::string>& file, int& row);
 };
 

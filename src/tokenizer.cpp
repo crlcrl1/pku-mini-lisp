@@ -114,10 +114,11 @@ bool Tokenizer::checkEnd(const std::deque<TokenPtr>& tokens) {
     return parenCount == 0;
 }
 
-std::deque<TokenPtr> Tokenizer::fromStream(std::istream* stream, const bool isRepl,
+std::deque<TokenPtr> Tokenizer::fromStream(std::istream* stream, std::optional<Repl>& repl,
                                            const std::optional<std::string>& file, int& row) {
-    if (isRepl) {
-        std::cout << ">>> ";
+    if (repl) {
+        repl->updateCompletion();
+        repl->readLine(">>> ");
     }
     std::string line;
     std::getline(*stream, line);
@@ -125,10 +126,10 @@ std::deque<TokenPtr> Tokenizer::fromStream(std::istream* stream, const bool isRe
     auto tokens = tokenize(line, file, row);
     row++;
     while (!checkEnd(tokens)) {
-        if (isRepl) {
-            std::cout << "... ";
+        if (repl) {
+            repl->readLine("... ");
         }
-        if (!isRepl && stream->eof()) {
+        if (!repl && stream->eof()) {
             throw SyntaxError("Unexpected end of file",
                               Location{file.value_or("<stdin>"), row, 0, 0});
         }

@@ -64,7 +64,6 @@ void EvalEnv::addBuiltins() {
         BUILTIN_PAIR(even, even?),
         BUILTIN_PAIR(odd, odd?),
         BUILTIN_PAIR(zero, zero?),
-        BUILTIN_PAIR(require, require),
     };
 
     for (const auto& i : builtins) {
@@ -121,7 +120,7 @@ ValuePtr EvalEnv::eval(ValuePtr expr) {
         const auto firstName = first->asSymbolName();
         // Check if it's a special form
         if (firstName && SPECIAL_FORMS.contains(firstName.value())) {
-            const auto form = SPECIAL_FORMS.at(first->asSymbolName().value());
+            const auto form = SPECIAL_FORMS.at(firstName.value());
             auto params = std::vector(values.begin() + 1, values.end());
             removeTrailingNil(params);
             return form(params, this);

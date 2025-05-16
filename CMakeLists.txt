@@ -35,6 +35,12 @@ if (USE_SANITIZER)
     endif ()
 endif ()
 
+set(REPLXX_BUILD_EXAMPLES OFF)
+set(CMAKE_CXX_STANDARD 23)
+add_subdirectory(third_party/replxx)
+
+target_link_libraries(mini_lisp PRIVATE replxx::replxx)
+
 if (USE_GTEST)
     find_package(GTest REQUIRED)
     enable_testing()
@@ -46,7 +52,8 @@ if (USE_GTEST)
     add_executable(mini_lisp_tests ${TEST_SOURCES})
 
     target_include_directories(mini_lisp_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-    target_link_libraries(mini_lisp_tests GTest::GTest GTest::Main)
+    target_link_libraries(mini_lisp_tests PRIVATE GTest::GTest GTest::Main)
+    target_link_libraries(mini_lisp_tests PRIVATE replxx::replxx)
     set_target_properties(
             mini_lisp_tests
             PROPERTIES CXX_STANDARD 23

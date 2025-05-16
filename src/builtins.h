@@ -88,10 +88,11 @@ ValuePtr modulo(const std::vector<ValuePtr>& params);
 
 ValuePtr remainder(const std::vector<ValuePtr>& params);
 
-ValuePtr loceq(const std::vector<ValuePtr>&
-                   params);  /// Whether two values are stored at the same memory location
+/// Whether two values are stored at the same memory location
+ValuePtr loceq(const std::vector<ValuePtr>& params);
 
-ValuePtr dataeq(const std::vector<ValuePtr>& params);  /// Whether two values are equal
+/// Whether two values are equal
+ValuePtr dataeq(const std::vector<ValuePtr>& params);
 
 ValuePtr logicalNot(const std::vector<ValuePtr>& params);
 
@@ -100,8 +101,6 @@ ValuePtr even(const std::vector<ValuePtr>& params);
 ValuePtr odd(const std::vector<ValuePtr>& params);
 
 ValuePtr zero(const std::vector<ValuePtr>& params);
-
-ValuePtr require(const std::vector<ValuePtr>& params);
 
 }  // namespace builtins
 

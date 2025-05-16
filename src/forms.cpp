@@ -1,10 +1,19 @@
 #include "forms.h"
 
+#include <filesystem>
 #include <ranges>
+
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
+#include <fstream>
 
 #include "error.h"
 #include "eval_env.h"
+#include "parser.h"
 #include "pool.h"
+#include "tokenizer.h"
 #include "utils.h"
 #include "value.h"
 
@@ -21,6 +30,7 @@ const std::unordered_map<std::string, SpecialFormType*> SPECIAL_FORMS = {
     {"begin", &beginForm},
     {"let", &letForm},
     {"quasiquote", &quasiquoteForm},
+    {"require", &requireForm}
 };
 // clang-format on
 
@@ -240,4 +250,122 @@ ValuePtr quasiquoteForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
         result.push_back(arg);
     }
     return LISP_PAIR(PairValue::fromVector(result));
+}
+
+void loadExtension(const std::string& fileName) {
+    using InitFuncType = void();
+
+#ifdef _WIN32
+    throw ValueError("Native extensions are not supported on Windows yet.", std::nullopt);
+#else
+    // convert to absolute path
+    std::filesystem::path path(fileName);
+    if (!path.is_absolute()) {
+        path = std::filesystem::current_path() / path;
+    }
+    void* handle = dlopen(path.c_str(), RTLD_LAZY);
+    if (!handle) {
+        throw ValueError(std::format("Failed to load extension: {}", dlerror()), std::nullopt);
+    }
+    auto initFunc = reinterpret_cast<InitFuncType*>(dlsym(handle, "init_ext"));
+    if (const char* error = dlerror()) {
+        dlclose(handle);
+        throw ValueError(std::format("Failed to load extension: {}", error), std::nullopt);
+    }
+    initFunc();
+#endif
+}
+
+std::vector<std::string> readLispPath() {
+    std::vector<std::string> paths = {"."};
+    const char* env = std::getenv("LISP_PATH");
+    if (env == nullptr) {
+        return paths;
+    }
+
+    std::string envPath(env);
+    std::string delimiter = ":";
+    size_t pos = 0;
+    while ((pos = envPath.find(delimiter)) != std::string::npos) {
+        paths.push_back(envPath.substr(0, pos));
+        envPath.erase(0, pos + delimiter.length());
+    }
+    if (!envPath.empty()) {
+        paths.push_back(envPath);
+    }
+    return paths;
+}
+
+ValuePtr requireForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
+    CHECK_PARAM_NUM(require, 1);
+    CHECK_TYPE(params[0], STRING, require, string);
+    const auto moduleName = dynamic_cast<StringValue*>(params[0])->getValue();
+    if (std::ranges::find(EvalEnv::loadStack, moduleName) != EvalEnv::loadStack.end()) {
+        throw ValueError(std::format("Circular dependency detected: {}", moduleName),
+                         params[0]->getLocation());
+    }
+    EvalEnv::loadStack.push_back(moduleName);
+    const auto filename = std::format("{}.scm", moduleName);
+#ifdef _WIN32
+    const auto extensionFilename = std::format("lib{}.dll", moduleName);
+#else
+    const auto extensionFilename = std::format("lib{}.so", moduleName);
+#endif
+
+    // find dynamic library or script file in LISP_PATH
+    bool extensionFind = false;
+    std::string extensionFile;
+    bool moduleFind = false;
+    std::string moduleFile;
+
+    const auto paths = readLispPath();
+    for (const auto& path : paths) {
+        const auto modulePath = std::filesystem::path(path) / filename;
+        const auto extensionPath = std::filesystem::path(path) / extensionFilename;
+
+        if (std::filesystem::exists(modulePath)) {
+            moduleFind = true;
+            moduleFile = modulePath.string();
+            break;
+        }
+        if (std::filesystem::exists(extensionPath)) {
+            extensionFind = true;
+            extensionFile = extensionPath.string();
+            break;
+        }
+    }
+
+    if (!extensionFind && !moduleFind) {
+        throw ValueError(
+            std::format(
+                "Failed to load module {} because either {} or {} does not exist in LISP_PATH",
+                filename, moduleName, extensionFilename),
+            params[0]->getLocation());
+    }
+
+    if (extensionFind) {
+        try {
+            loadExtension(extensionFile);
+        } catch (const ValueError& e) {
+            throw ValueError(e.what(), params[0]->getLocation());
+        }
+        return LISP_NIL;
+    }
+    std::ifstream file(moduleFile);
+    if (!file.is_open()) {
+        throw ValueError(std::format("Failed to open file: {}", filename),
+                         params[0]->getLocation());
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string content = buffer.str();
+
+    // parse the content
+    auto tokens = Tokenizer::tokenize(content, moduleFile, 0);
+    std::deque<TokenPtr> statement;
+    Parser parser(std::move(tokens));
+    while (!parser.empty()) {
+        env->eval(parser.parse());
+    }
+    return LISP_NIL;
 }
