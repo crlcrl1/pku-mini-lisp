@@ -4,6 +4,7 @@
 #include <regex>
 
 #include "forms.h"
+#include "pool.h"
 
 int Repl::utf8strLength(const std::string& s) {
     const size_t len = s.length();
@@ -86,6 +87,7 @@ Repl::Repl() {
         keywordHighlight[formName] = Replxx::Color::CYAN;
     }
 
+    replxx.bind_key_internal(Replxx::KEY::control('D'), "abort_line");
     replxx.set_highlighter_callback(
         [](const std::string& context, Replxx::colors_t& colors) static {
             hookColor(context, colors);
@@ -98,6 +100,10 @@ void Repl::updateCompletion() {
 
 void Repl::readLine(const char* prompt) {
     auto input = replxx.input(prompt);
+    if (input == nullptr) {
+        ValuePool::dispose();
+        std::exit(0);
+    }
     inputStream << input << '\n';
 }
 

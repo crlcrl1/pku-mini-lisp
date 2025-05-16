@@ -3,7 +3,6 @@
 
 #include <deque>
 
-#include "location.h"
 #include "value.h"
 
 void removeTrailingNil(std::vector<ValuePtr>& values);
