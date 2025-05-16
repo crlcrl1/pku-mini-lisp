@@ -6,6 +6,7 @@
 
 #include "error.h"
 #include "eval_env.h"
+#include "highlighter.h"
 #include "parser.h"
 #include "pool.h"
 #include "repl.h"
@@ -62,22 +63,17 @@ int main(int argc, char* argv[]) {
                 const auto value = parser.parse();
                 const auto result = env->eval(value);
                 if (repl) {
-                    std::cout << result->toString() << std::endl;
+                    displayValue(result);
                 }
             }
         } catch (LispError& e) {
-            std::cerr << std::format("{}:\n {}", e.name(), e.what()) << std::endl;
-            if (auto& location = e.location()) {
-                std::cerr << std::format("  {}:{}:{}", location->file, location->row + 1,
-                                         location->col)
-                          << std::endl;
-            }
+            displayError(e);
             if (!repl) {
                 ValuePool::dispose();
                 return 1;
             }
         } catch (std::runtime_error& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
+            std::cerr << colored("Error: ", Color::RED, Style::BOLD) << e.what() << std::endl;
             if (!repl) {
                 ValuePool::dispose();
                 return 1;
