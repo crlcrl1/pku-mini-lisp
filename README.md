@@ -16,7 +16,7 @@ A simple Lisp interpreter implemented in C++.
 - [x] Lambda expressions
 - [x] Garbage collection with mark-and-sweep algorithm
 - [ ] JIT compilation with LLVM
-- [x] Load modules written in C++ or Lisp with `require` function (Windows is not supported yet)
+- [x] Load modules written in C++ or Lisp with `require` function (C++ extension is not supported on Windows)
 - [x] REPL with syntax highlighting
 
 ## How to build the project

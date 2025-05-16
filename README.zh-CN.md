@@ -16,7 +16,7 @@
 - [x] Lambda 表达式
 - [x] 使用标记-清除算法进行垃圾回收
 - [ ] 使用 LLVM 进行 JIT 编译
-- [x] 使用 `require` 函数加载用 C++ 或 Lisp 编写的模块（Windows 不支持）
+- [x] 使用 `require` 函数加载用 C++ 或 Lisp 编写的模块（Windows 上不支持 C++ 扩展）
 - [x] 带有语法高亮的 REPL
 
 ## 如何构建项目
