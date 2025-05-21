@@ -1,6 +1,7 @@
 #include "repl.h"
 
 #include <iostream>
+#include <ranges>
 #include <regex>
 
 #include "forms.h"
