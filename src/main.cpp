@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     } else {
-        repl = Repl();
+        repl.emplace();
         input = &repl->getInput();
         file = std::nullopt;
     }

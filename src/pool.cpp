@@ -1,5 +1,6 @@
 #include "pool.h"
 
+#include <iostream>
 #include <ranges>
 
 #include "builtins.h"
@@ -52,8 +53,8 @@ size_t ValuePool::gc() {
             for (const auto value : std::views::values(env->symbolTable)) {
                 found = true;
                 addedValues.push_back(value);
-                const auto children = Value::children(value);
-                addedValues.insert(addedValues.end(), children.begin(), children.end());
+                const auto children = value->children();
+                std::ranges::copy(children, std::back_inserter(addedValues));
             }
         }
         // add new values to reachableValues, if they are lambdas, add their envs to addedEnvs
@@ -71,8 +72,8 @@ size_t ValuePool::gc() {
                 }
                 for (const auto v : lambda->body) {
                     addedValues.push_back(v);
-                    const auto children = Value::children(v);
-                    addedValues.insert(addedValues.end(), children.begin(), children.end());
+                    const auto children = v->children();
+                    std::ranges::copy(children, std::back_inserter(addedValues));
                 }
                 found = true;
             }

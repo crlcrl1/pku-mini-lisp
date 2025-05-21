@@ -193,7 +193,6 @@ ValuePtr letForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
         throw ValueError("let expected a list as the first argument", varPair->getLocation());
     }
     varVec.pop_back();
-    std::unordered_map<std::string, std::optional<ValuePtr>> oldVarMap;
     std::unordered_map<std::string, ValuePtr> newVarMap;
     for (const auto& var : varVec) {
         CHECK_TYPE(var, PAIR, let, pair);
@@ -362,7 +361,6 @@ ValuePtr requireForm(const std::vector<ValuePtr>& params, EvalEnv* env) {
 
     // parse the content
     auto tokens = Tokenizer::tokenize(content, moduleFile, 0);
-    std::deque<TokenPtr> statement;
     Parser parser(std::move(tokens));
     while (!parser.empty()) {
         env->eval(parser.parse());

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 #include <iterator>
+#include <ranges>
 #include <set>
 #include <utility>
 
@@ -186,6 +187,10 @@ bool EvalEnv::removeVariable(const std::string& name) {
         return true;
     }
     return false;
+}
+
+std::vector<std::string> EvalEnv::variables() const {
+    return std::views::keys(symbolTable) | std::ranges::to<std::vector>();
 }
 
 ValuePtr EvalEnv::lookupBinding(const std::string& name) const {

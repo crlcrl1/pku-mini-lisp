@@ -1,17 +1,10 @@
 #include "builtins.h"
 
 #include <cmath>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
-
-#ifndef _WIN32
-#include <dlfcn.h>
-#endif
 
 #include "error.h"
 #include "eval_env.h"
-#include "parser.h"
 #include "pool.h"
 #include "tokenizer.h"
 #include "utils.h"

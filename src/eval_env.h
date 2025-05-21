@@ -46,6 +46,7 @@ public:
     std::optional<ValuePtr> addVariable(const std::string& name, const ValuePtr& value);
 
     bool removeVariable(const std::string& name);
+    std::vector<std::string> variables() const;
 
     static std::vector<std::string> loadStack;
 

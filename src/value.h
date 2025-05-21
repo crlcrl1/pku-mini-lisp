@@ -45,7 +45,7 @@ public:
     virtual bool equals(const ValuePtr& other) const = 0;
     const std::optional<Location>& getLocation() const;
 
-    static std::vector<ValuePtr> children(ValuePtr value);
+    std::vector<ValuePtr> children();
 };
 
 using BuiltinFuncType = ValuePtr(const std::vector<ValuePtr>&);

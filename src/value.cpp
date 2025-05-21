@@ -51,19 +51,19 @@ const std::optional<Location>& Value::getLocation() const {
     return location;
 }
 
-std::vector<ValuePtr> Value::children(ValuePtr value) {
-    if (value->getType() != ValueType::PAIR) {
+std::vector<ValuePtr> Value::children() {
+    if (this->getType() != ValueType::PAIR) {
         return {};
     }
     std::vector<ValuePtr> children;
-    auto pair = dynamic_cast<PairValue*>(value);
+    auto pair = dynamic_cast<PairValue*>(this);
     children.push_back(pair->getCar());
     children.push_back(pair->getCdr());
 
-    auto carChildren = Value::children(pair->getCar());
-    auto cdrChildren = Value::children(pair->getCdr());
-    children.insert(children.end(), carChildren.begin(), carChildren.end());
-    children.insert(children.end(), cdrChildren.begin(), cdrChildren.end());
+    auto carChildren = pair->getCar()->children();
+    auto cdrChildren = pair->getCdr()->children();
+    std::ranges::copy(carChildren, std::back_inserter(children));
+    std::ranges::copy(cdrChildren, std::back_inserter(children));
     return children;
 }
 

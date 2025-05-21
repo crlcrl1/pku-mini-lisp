@@ -82,20 +82,65 @@ void Repl::hookColor(const std::string& context, Replxx::colors_t& colors) {
     }
 }
 
+Repl::Replxx::completions_t Repl::hookCompletion(std::string const& context, int& contextLen) {
+    Replxx::completions_t completions;
+    const size_t totalLen = context.length();
+    size_t suffix = totalLen - 1;
+    while (suffix > 0 && !isSymbolSplit(context[suffix])) {
+        --suffix;
+    }
+    if (isSymbolSplit(context[suffix])) {
+        ++suffix;
+    }
+    std::string suffixStr = context.substr(suffix, totalLen - suffix);
+    if (suffixStr.empty()) {
+        contextLen = 0;
+        return completions;
+    }
+    contextLen = utf8strLength(suffixStr);
+    const auto filterPrefix = [&](const std::string& str) { return str.starts_with(suffixStr); };
+    const auto keywordCompletions = std::views::keys(keywordHighlight) |
+                                    std::views::filter(filterPrefix) |
+                                    std::ranges::to<std::vector>();
+    std::ranges::copy(keywordCompletions, std::back_inserter(completions));
+    const auto syntaxCompletions =
+        this->syntaxCompletions | std::views::filter(filterPrefix) | std::ranges::to<std::vector>();
+    std::ranges::copy(syntaxCompletions, std::back_inserter(completions));
+    return completions;
+}
+
 Repl::Repl() {
+    syntaxHighlight = {
+        // symbols
+        {R"([a-zA-Z_+\-!$%&*./:<>=?@~][a-zA-Z0-9_+\-!$%&*./:<>=?@~]*)", Replxx::Color::BLUE, true},
+        // numbers
+        {R"([+-]?(\d+(\.\d*)?|\.\d+))", Replxx::Color::YELLOW, true},
+        // strings
+        {R"("([^"\\]|\\.)*")", Replxx::Color::GREEN, true},
+        // comments
+        {R"(\s*;.*)", Replxx::Color::GRAY, false},
+    };
+    keywordHighlight = {
+        {"#t", Replxx::Color::MAGENTA},
+        {"#f", Replxx::Color::MAGENTA},
+    };
     for (const auto& formName : std::views::keys(SPECIAL_FORMS)) {
         keywordHighlight[formName] = Replxx::Color::CYAN;
     }
 
     replxx.bind_key_internal(Replxx::KEY::control('D'), "abort_line");
-    replxx.set_highlighter_callback(
-        [](const std::string& context, Replxx::colors_t& colors) static {
-            hookColor(context, colors);
-        });
+
+    // here, we capture this pointer, so we should not copy or move the class
+    replxx.set_highlighter_callback([this](const std::string& context, Replxx::colors_t& colors) {
+        hookColor(context, colors);
+    });
+    replxx.set_completion_callback([this](std::string const& context, int& contextLen) {
+        return hookCompletion(context, contextLen);
+    });
 }
 
 void Repl::updateCompletion() {
-    // TODO: implement completion
+    syntaxCompletions = ValuePool::instance()->root()->variables();
 }
 
 void Repl::readLine(const char* prompt) {
@@ -106,19 +151,3 @@ void Repl::readLine(const char* prompt) {
     }
     inputStream << input << '\n';
 }
-
-Repl::syntax_highlight_t Repl::syntaxHighlight = {
-    // symbols
-    {R"([a-zA-Z_+\-!$%&*./:<>=?@~][a-zA-Z0-9_+\-!$%&*./:<>=?@~]*)", Replxx::Color::BLUE, true},
-    // numbers
-    {R"([+-]?(\d+(\.\d*)?|\.\d+))", Replxx::Color::YELLOW, true},
-    // strings
-    {R"("([^"\\]|\\.)*")", Replxx::Color::GREEN, true},
-    // comments
-    {R"(\s*;.*)", Replxx::Color::GRAY, false},
-};
-
-Repl::keyword_highlight_t Repl::keywordHighlight = {
-    {"#t", Replxx::Color::MAGENTA},
-    {"#f", Replxx::Color::MAGENTA},
-};

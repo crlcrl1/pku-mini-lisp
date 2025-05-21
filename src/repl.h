@@ -15,13 +15,19 @@ class Repl {
     static int utf8strLength(const std::string& s);
     static bool isSymbolSplit(char ch);
 
-    static void hookColor(const std::string& context, Replxx::colors_t& colors);
+    void hookColor(const std::string& context, Replxx::colors_t& colors);
+    Replxx::completions_t hookCompletion(std::string const& context, int& contextLen);
 
-    static syntax_highlight_t syntaxHighlight;
-    static keyword_highlight_t keywordHighlight;
+    syntax_highlight_t syntaxHighlight;
+    keyword_highlight_t keywordHighlight;
+    std::vector<std::string> syntaxCompletions;
 
 public:
     Repl();
+    // Disable copy constructor and move constructor because we need to pin the class
+    // in the same memory. Refer to the constructor for more details.
+    Repl(const Repl&) = delete;
+    Repl(Repl&&) = delete;
 
     std::stringstream& getInput() {
         return inputStream;
