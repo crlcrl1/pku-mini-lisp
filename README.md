@@ -18,6 +18,7 @@ A simple Lisp interpreter implemented in C++.
 - [ ] JIT compilation with LLVM
 - [x] Load modules written in C++ or Lisp with `require` function (C++ extension is not supported on Windows)
 - [x] REPL with syntax highlighting
+- [x] Error handling with source code location information
 
 ## How to build the project
 
