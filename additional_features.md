@@ -12,7 +12,7 @@ For better user experience, we add syntax highlighting and autocomplete features
 
 ### Write and Load Mini Lisp Module
 
-Most languages allow users to write their code in separated files. We add the similar feature to our interpreter by adding a `require` special form. For example, we can write a module named `add.lisp`:
+Most languages allow users to write their code in separated files. We add the similar feature to our interpreter by adding a `require` special form. For example, we can write a module named `add.scm`:
 
 ```lisp
 (define (add x y) (+ x y))

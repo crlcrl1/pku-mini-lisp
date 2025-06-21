@@ -6,7 +6,6 @@
 #include "error.h"
 #include "eval_env.h"
 #include "pool.h"
-#include "tokenizer.h"
 #include "utils.h"
 
 #define BUILTIN_NUMBER_CHECK(var, op)                                                \
