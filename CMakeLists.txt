@@ -8,6 +8,8 @@ option(BUILD_CPP_EXAMPLES "Build C++ extension examples" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+
 aux_source_directory(src SOURCES)
 
 add_executable(mini_lisp ${SOURCES})
