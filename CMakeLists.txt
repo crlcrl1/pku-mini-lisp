@@ -2,13 +2,11 @@ cmake_minimum_required(VERSION 3.24)
 
 project(mini_lisp)
 
-option(USE_GTEST "Use GTest" OFF)
+option(USE_GTEST "Use GTest" ON)
 option(USE_SANITIZER "Use sanitizer" OFF)
 option(BUILD_CPP_EXAMPLES "Build C++ extension examples" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 aux_source_directory(src SOURCES)
 
